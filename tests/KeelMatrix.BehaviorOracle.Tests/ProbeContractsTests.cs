@@ -108,7 +108,10 @@ public static class ProbeFixture
         }
         finally
         {
-            File.Delete(marker);
+            if (child.HasExited && child.ExitCode == 0)
+            {
+                File.Delete(marker);
+            }
         }
     }
 
