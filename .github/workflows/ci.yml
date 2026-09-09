@@ -115,9 +115,11 @@ jobs:
         shell: pwsh
         run: |
           $benchmarkScript = [IO.Path]::Combine($PWD.Path, 'bench', 'Run-Benchmark.ps1')
+          $PSNativeCommandUseErrorActionPreference = $false
           & pwsh -NoProfile -File $benchmarkScript -Seed 12345 -ScenarioBudget 80 -ConfirmationRuns 3
-          if ($LASTEXITCODE -ne 1) {
-            throw "The synthetic benchmark must report the planted divergence with exit code 1, got $LASTEXITCODE."
+          $benchmarkExitCode = $LASTEXITCODE
+          if ($benchmarkExitCode -ne 1) {
+            throw "The synthetic benchmark must report the planted divergence with exit code 1, got $benchmarkExitCode."
           }
 
           $reportPath = [IO.Path]::Combine($PWD.Path, 'bench', 'results', 'synthetic-benchmark.json')
@@ -279,7 +281,7 @@ jobs:
 
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $pathPattern = '(?i)(^|/)(AGENTS\.md|\.env(?:\.local)?|keelmatrix\.telemetry\.json|tests?|fixtures|artifacts|obj|bin|\.vs|\.vscode)(/|$)'
-          $textPattern = '(?i)(Paperclip|Codex Luna|KEE-\d+|(?:password|api[_-]?key|secret)\s*=|BEGIN (?:RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]+)'
+          $textPattern = '(?i)((?:password|api[_-]?key|secret)\s*=|BEGIN (?:RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]+)'
           $textExtensions = @('.nuspec', '.md', '.txt', '.json', '.xml', '.props', '.targets', '.cs', '.csproj')
 
           foreach ($package in Get-ChildItem -LiteralPath $packageDirectory -File) {

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace KeelMatrix.BehaviorOracle;
@@ -12,6 +13,7 @@ internal static class WorkerHost
         try
         {
             CultureInfoDefaults.Apply();
+            UnixProcessGroup.CreateForCurrentProcess();
             var line = await Console.In.ReadLineAsync().ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(line))
             {
@@ -387,14 +389,31 @@ internal sealed class WorkerRunner
     {
         try
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                UnixProcessGroup.TryKill(process.Id);
+            }
+
             if (!process.HasExited)
             {
                 process.Kill(entireProcessTree: true);
-                process.WaitForExit(1000);
             }
+
+            process.WaitForExit(1000);
         }
         catch
         {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(1000);
+                }
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -436,6 +455,33 @@ internal sealed class WorkerRunner
 
     private sealed record BoundedText(string Text, int Bytes, bool ExceededLimit);
     private sealed record OutputLimitBreach(string FailureCategory, int Bytes);
+}
+
+internal static class UnixProcessGroup
+{
+    private const int Sigkill = 9;
+
+    [DllImport("libc", SetLastError = true)]
+    private static extern int kill(int processId, int signal);
+
+    [DllImport("libc", SetLastError = true)]
+    private static extern int setsid();
+
+    public static void CreateForCurrentProcess()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            _ = setsid();
+        }
+    }
+
+    public static void TryKill(int processId)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            _ = kill(-processId, Sigkill);
+        }
+    }
 }
 
 internal static class InvocationAwaiter
