@@ -194,7 +194,7 @@ internal static class TypeSupport
         {
             return method.Module.ResolveField(token, method.DeclaringType?.GetGenericArguments(), MethodGenericArguments(method));
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (IsUnresolvableMetadataException(exception))
         {
             return null;
         }
@@ -206,7 +206,7 @@ internal static class TypeSupport
         {
             return method.Module.ResolveMethod(token, method.DeclaringType?.GetGenericArguments(), MethodGenericArguments(method));
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (IsUnresolvableMetadataException(exception))
         {
             return null;
         }
@@ -218,11 +218,20 @@ internal static class TypeSupport
         {
             return method.Module.ResolveMember(token, method.DeclaringType?.GetGenericArguments(), MethodGenericArguments(method));
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (IsUnresolvableMetadataException(exception))
         {
             return null;
         }
     }
+
+    private static bool IsUnresolvableMetadataException(Exception exception) =>
+        exception is ArgumentException or
+            FileNotFoundException or
+            FileLoadException or
+            BadImageFormatException or
+            TypeLoadException or
+            MissingMemberException or
+            MemberAccessException;
 
     private static string? AnalyzeCall(MethodBase called, HashSet<MethodBase> visiting, int depth)
     {
@@ -272,6 +281,11 @@ internal static class TypeSupport
         }
 
         if (type == typeof(DateTimeOffset) && method.Name is "get_Now" or "get_UtcNow")
+        {
+            return true;
+        }
+
+        if (type == typeof(Guid) && method.Name == "NewGuid")
         {
             return true;
         }
@@ -348,7 +362,7 @@ internal static class TypeSupport
 
         if (type == typeof(Guid))
         {
-            return method.Name is "NewGuid" or "ToString";
+            return method.Name == "ToString";
         }
 
         if (type == typeof(Array))

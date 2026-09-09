@@ -37,6 +37,8 @@ public static class ProbeFixture
 
     public static int Add(string value) => value.Length;
 
+    public static string NewGuid() => Guid.NewGuid().ToString("D");
+
     public static T Identity<T>(T value) => value;
 
     public static string FromStream(Stream value) => value.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -174,6 +176,66 @@ public sealed class SurfaceDiscoveryTests
         var methods = names.Select(name => typeof(ProbeFixture).GetMethod(name)!).ToArray();
 
         Assert.All(methods, method => Assert.NotNull(TypeSupport.UnsupportedReason(method)));
+    }
+
+    [Fact]
+    public void Guid_generation_is_skipped_instead_of_claimed_supported()
+    {
+        var method = typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.NewGuid))!;
+
+        var reason = TypeSupport.UnsupportedReason(method);
+
+        Assert.NotNull(reason);
+        Assert.Contains("random", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Missing_dependency_keeps_affected_method_visible_as_skipped()
+    {
+        const string signature = "BehaviorOracleCorpus.SemanticChanges::ReadReferencedEnvironment()->System.Int32";
+        var sourceAssembly = Path.Combine(AppContext.BaseDirectory, "Fixtures", "BehaviorOracleCorpus.Baseline.dll");
+        var root = Directory.CreateTempSubdirectory("behavior-oracle-missing-dependency-");
+        var baseline = Directory.CreateDirectory(Path.Combine(root.FullName, "baseline"));
+        var candidate = Directory.CreateDirectory(Path.Combine(root.FullName, "candidate"));
+        var assemblyName = Path.GetFileName(sourceAssembly);
+        File.Copy(sourceAssembly, Path.Combine(baseline.FullName, assemblyName));
+        File.Copy(sourceAssembly, Path.Combine(candidate.FullName, assemblyName));
+        var dependencyFileName = Path.GetFileNameWithoutExtension(assemblyName) + ".deps.json";
+        File.Copy(
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "MissingDependency.deps.json"),
+            Path.Combine(baseline.FullName, dependencyFileName));
+        File.Copy(
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "MissingDependency.deps.json"),
+            Path.Combine(candidate.FullName, dependencyFileName));
+
+        try
+        {
+            var surface = new ApiSurfaceDiscoverer().DiscoverDirectory(baseline.FullName);
+            var descriptor = Assert.Single(surface.CallableMembers.Where(member => member.Signature == signature));
+            Assert.False(descriptor.IsSupported);
+            Assert.Contains("unresolved call target", descriptor.UnsupportedReason, StringComparison.OrdinalIgnoreCase);
+
+            var report = await new ComparisonEngine().CompareAsync(
+                baseline.FullName,
+                candidate.FullName,
+                new ProbeOptions(ScenarioBudget: 1, ConfirmationRuns: 2));
+
+            var result = Assert.Single(report.ScenarioResults.Where(result => result.ApiSignature == signature));
+            Assert.Equal("SKIPPED", result.Classification);
+            Assert.Equal(
+                report.UnsupportedApiCount,
+                report.ScenarioResults.Count(result => result.Classification == "SKIPPED"));
+            Assert.Contains(report.Diagnostics, diagnostic =>
+                diagnostic.Contains(signature, StringComparison.Ordinal) &&
+                diagnostic.Contains("unresolved call target", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            root.Delete(recursive: true);
+        }
     }
 }
 

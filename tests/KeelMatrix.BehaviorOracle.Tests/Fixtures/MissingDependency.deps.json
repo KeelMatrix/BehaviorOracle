@@ -1,0 +1,35 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "BehaviorOracleCorpus.Baseline/1.0.0": {
+        "dependencies": {
+          "BehaviorOracleCorpus.HiddenState": "1.0.0"
+        },
+        "runtime": {
+          "BehaviorOracleCorpus.Baseline.dll": {}
+        }
+      },
+      "BehaviorOracleCorpus.HiddenState/1.0.0": {
+        "runtime": {
+          "BehaviorOracleCorpus.HiddenState.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BehaviorOracleCorpus.Baseline/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "BehaviorOracleCorpus.HiddenState/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

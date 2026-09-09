@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj" />
+    <ProjectReference Include="..\..\bench\corpus\baseline\Baseline.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -15,5 +16,8 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="coverlet.collector" PrivateAssets="all" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\bench\corpus\baseline\bin\$(Configuration)\net8.0\BehaviorOracleCorpus.Baseline.dll" Link="Fixtures\BehaviorOracleCorpus.Baseline.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\MissingDependency.deps.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
-
