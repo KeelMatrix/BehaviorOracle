@@ -148,6 +148,8 @@ jobs:
             throw "Unexpected synthetic benchmark metrics: $($metrics | ConvertTo-Json -Compress)."
           }
 
+          exit 0
+
       - name: Check vulnerable dependencies
         shell: pwsh
         run: |

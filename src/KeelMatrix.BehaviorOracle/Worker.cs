@@ -465,6 +465,9 @@ internal static class UnixProcessGroup
     private static extern int kill(int processId, int signal);
 
     [DllImport("libc", SetLastError = true)]
+    private static extern int getpgid(int processId);
+
+    [DllImport("libc", SetLastError = true)]
     private static extern int setsid();
 
     public static void CreateForCurrentProcess()
@@ -479,9 +482,122 @@ internal static class UnixProcessGroup
     {
         if (!OperatingSystem.IsWindows())
         {
-            _ = kill(-processId, Sigkill);
+            foreach (var descendant in FindDescendants(processId).OrderByDescending(static item => item.Depth))
+            {
+                _ = kill(descendant.ProcessId, Sigkill);
+                WaitForExit(descendant.ProcessId);
+            }
+
+            var processGroupId = getpgid(processId);
+            _ = processGroupId == processId
+                ? kill(-processGroupId, Sigkill)
+                : kill(processId, Sigkill);
         }
     }
+
+    private static List<ProcessNode> FindDescendants(int processId)
+    {
+        try
+        {
+            using var snapshot = Process.Start(new ProcessStartInfo
+            {
+                FileName = "/bin/ps",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                ArgumentList = { "-axo", "pid=,ppid=" }
+            });
+            if (snapshot is null)
+            {
+                return [];
+            }
+
+            var output = snapshot.StandardOutput.ReadToEnd();
+            snapshot.WaitForExit(1000);
+            if (snapshot.ExitCode != 0)
+            {
+                return [];
+            }
+
+            var parents = new Dictionary<int, List<int>>();
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                if (fields.Length != 2 ||
+                    !int.TryParse(fields[0], CultureInfo.InvariantCulture, out var childId) ||
+                    !int.TryParse(fields[1], CultureInfo.InvariantCulture, out var parentId))
+                {
+                    continue;
+                }
+
+                if (!parents.TryGetValue(parentId, out var children))
+                {
+                    children = [];
+                    parents[parentId] = children;
+                }
+
+                children.Add(childId);
+            }
+
+            var descendants = new List<ProcessNode>();
+            var pending = new Stack<ProcessNode>();
+            if (parents.TryGetValue(processId, out var directChildren))
+            {
+                foreach (var childId in directChildren)
+                {
+                    pending.Push(new ProcessNode(childId, 1));
+                }
+            }
+
+            var seen = new HashSet<int>();
+            while (pending.Count > 0)
+            {
+                var node = pending.Pop();
+                if (!seen.Add(node.ProcessId))
+                {
+                    continue;
+                }
+
+                descendants.Add(node);
+                if (parents.TryGetValue(node.ProcessId, out var children))
+                {
+                    foreach (var childId in children)
+                    {
+                        pending.Push(new ProcessNode(childId, node.Depth + 1));
+                    }
+                }
+            }
+
+            return descendants;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static void WaitForExit(int processId)
+    {
+        var deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency / 4;
+        while (Stopwatch.GetTimestamp() < deadline)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                if (process.HasExited)
+                {
+                    return;
+                }
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+
+            Thread.Sleep(10);
+        }
+    }
+
+    private sealed record ProcessNode(int ProcessId, int Depth);
 }
 
 internal static class InvocationAwaiter
