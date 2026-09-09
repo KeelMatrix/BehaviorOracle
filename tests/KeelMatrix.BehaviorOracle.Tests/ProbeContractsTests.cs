@@ -94,8 +94,10 @@ public static class ProbeFixture
     {
         var marker = Path.Combine(Path.GetTempPath(), $"behavior-oracle-descendant-{Environment.ProcessId}-{Guid.NewGuid():N}.pid");
         var startInfo = OperatingSystem.IsWindows()
-            ? new ProcessStartInfo("cmd.exe", "/c ping 127.0.0.1 -n 30 > NUL")
-            : new ProcessStartInfo("/bin/sh", "-c 'sleep 30'");
+            ? new ProcessStartInfo("cmd.exe")
+            : new ProcessStartInfo("/bin/sh");
+        startInfo.ArgumentList.Add(OperatingSystem.IsWindows() ? "/c" : "-c");
+        startInfo.ArgumentList.Add(OperatingSystem.IsWindows() ? "ping 127.0.0.1 -n 30 > NUL" : "sleep 30");
         startInfo.UseShellExecute = false;
         using var child = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start descendant.");
         File.WriteAllText(marker, child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
