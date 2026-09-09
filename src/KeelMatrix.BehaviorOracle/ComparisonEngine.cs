@@ -60,7 +60,15 @@ internal sealed class ComparisonEngine
         var divergences = new List<DivergenceRecord>();
         var comparisonMilliseconds = new List<double>();
         var minimizationMilliseconds = new List<double>();
+        var exercisedApis = new HashSet<string>(StringComparer.Ordinal);
+        var scenarioResults = pairs
+            .Where(static pair => !pair.Baseline.IsSupported || !pair.Candidate.IsSupported)
+            .Select(static pair => new ScenarioResult(pair.Baseline.Signature, -1, "SKIPPED"))
+            .ToList();
         var diagnostics = baseline.LoadErrors.Concat(candidate.LoadErrors).ToList();
+        diagnostics.AddRange(pairs
+            .Where(static pair => !pair.Baseline.IsSupported || !pair.Candidate.IsSupported)
+            .Select(static pair => $"{pair.Baseline.Signature}: skipped ({pair.Baseline.UnsupportedReason ?? pair.Candidate.UnsupportedReason})"));
 
         for (var pairIndex = 0; pairIndex < supportedPairs.Length && generated < options.ScenarioBudget; pairIndex++)
         {
@@ -73,6 +81,7 @@ internal sealed class ComparisonEngine
             foreach (var scenario in scenarios)
             {
                 generated++;
+                exercisedApis.Add(pair.Baseline.Signature);
                 var stopwatch = Stopwatch.StartNew();
                 var outcome = await CompareScenarioAsync(pair, scenario, options, cancellationToken).ConfigureAwait(false);
                 stopwatch.Stop();
@@ -111,6 +120,12 @@ internal sealed class ComparisonEngine
                         break;
                 }
 
+                scenarioResults.Add(new ScenarioResult(
+                    pair.Baseline.Signature,
+                    scenario.Index,
+                    Classification(outcome.Kind),
+                    outcome.FailureCategory));
+
                 if (cancellationToken.IsCancellationRequested)
                 {
                     break;
@@ -128,7 +143,8 @@ internal sealed class ComparisonEngine
             ScenarioBudget = options.ScenarioBudget,
             ConfirmationRuns = options.ConfirmationRuns,
             MatchedCallableApis = matchedSignatures.Length,
-            SupportedApisExercised = supportedPairs.Length,
+            EligibleSupportedApiPairs = supportedPairs.Length,
+            ExercisedApiCount = exercisedApis.Count,
             UnsupportedApiCount = unsupportedApiCount,
             SupportedApiPercentage = matchedSignatures.Length == 0
                 ? 0d
@@ -151,6 +167,7 @@ internal sealed class ComparisonEngine
             AddedApiSignatures = added,
             RemovedApiSignatures = removed,
             Divergences = divergences,
+            ScenarioResults = scenarioResults,
             Diagnostics = diagnostics
         };
     }
@@ -255,6 +272,17 @@ internal sealed class ComparisonEngine
         var ordered = values.OrderBy(static value => value).ToArray();
         return ordered[ordered.Length / 2];
     }
+
+    private static string Classification(ProbeResultKind kind) =>
+        kind switch
+        {
+            ProbeResultKind.EquivalentWithinTestedDomain => "EQUIVALENT",
+            ProbeResultKind.BehavioralDivergence => "DIVERGENCE",
+            ProbeResultKind.NondeterministicInconclusive => "INCONCLUSIVE",
+            ProbeResultKind.UnsupportedApi => "SKIPPED",
+            ProbeResultKind.ExecutionFailure => "FAILURE",
+            _ => "FAILURE"
+        };
 
     private sealed record ConfirmationResult(
         bool Success,

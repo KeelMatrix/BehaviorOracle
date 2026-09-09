@@ -129,7 +129,8 @@ internal sealed class ApiSurfaceDiscoverer
             var reason = method.ContainsGenericParameters
                 ? "open generic methods are outside the probe domain"
                 : FirstUnsupported(parameters.Select(static parameter => parameter.ParameterType)) ??
-                  TypeSupport.UnsupportedReason(method.ReturnType);
+                  TypeSupport.UnsupportedReason(method.ReturnType) ??
+                  TypeSupport.UnsupportedReason(method);
             if (!method.IsStatic)
             {
                 reason ??= TypeSupport.UnsupportedReason(type);

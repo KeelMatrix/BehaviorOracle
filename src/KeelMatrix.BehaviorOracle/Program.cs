@@ -82,7 +82,8 @@ internal static class Program
             ? "EQUIVALENT WITHIN TESTED DOMAIN"
             : "BEHAVIORAL DIVERGENCE");
         Console.WriteLine($"Matched callable APIs: {report.MatchedCallableApis}");
-        Console.WriteLine($"Supported APIs exercised: {report.SupportedApisExercised}");
+        Console.WriteLine($"Eligible supported API pairs: {report.EligibleSupportedApiPairs}");
+        Console.WriteLine($"APIs actually exercised: {report.ExercisedApiCount}");
         Console.WriteLine($"Unsupported APIs: {report.UnsupportedApiCount}");
         Console.WriteLine($"Generated scenarios: {report.GeneratedScenarios}");
         Console.WriteLine($"Stable scenarios: {report.StableScenarios}");

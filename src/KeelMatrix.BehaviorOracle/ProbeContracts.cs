@@ -150,7 +150,15 @@ internal sealed record BenchmarkMetrics(
     int TrueDetectedDivergences,
     int FalseDivergences,
     double Precision,
-    double Recall);
+    double Recall,
+    int ExpectedScenarioCount,
+    int ScenarioOutcomeMismatches);
+
+internal sealed record ScenarioResult(
+    string ApiSignature,
+    int ScenarioIndex,
+    string Classification,
+    string? FailureCategory = null);
 
 internal sealed record ProbeReport
 {
@@ -159,7 +167,8 @@ internal sealed record ProbeReport
     public int ScenarioBudget { get; init; }
     public int ConfirmationRuns { get; init; }
     public int MatchedCallableApis { get; init; }
-    public int SupportedApisExercised { get; init; }
+    public int EligibleSupportedApiPairs { get; init; }
+    public int ExercisedApiCount { get; init; }
     public int UnsupportedApiCount { get; init; }
     public double SupportedApiPercentage { get; init; }
     public int DiscoveredBaselineApis { get; init; }
@@ -180,6 +189,7 @@ internal sealed record ProbeReport
     public IReadOnlyList<string> AddedApiSignatures { get; init; } = [];
     public IReadOnlyList<string> RemovedApiSignatures { get; init; } = [];
     public IReadOnlyList<DivergenceRecord> Divergences { get; init; } = [];
+    public IReadOnlyList<ScenarioResult> ScenarioResults { get; init; } = [];
     public BenchmarkMetrics? Benchmark { get; init; }
     public IReadOnlyList<string> Diagnostics { get; init; } = [];
 }

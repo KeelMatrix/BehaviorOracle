@@ -29,13 +29,21 @@ internal sealed class ScenarioGenerator
             var random = new DeterministicRandom(seed, index);
             var arguments = method.GetParameters()
                 .Select((parameter, argumentIndex) =>
-                    GeneratedValueFactory.Create(
+                {
+                    var argumentRandom = random.Fork(argumentIndex);
+                    // Keep the first boundary cases stable for benchmark coverage, while
+                    // deriving the remainder from the supplied seed.
+                    var variant = index < 3
+                        ? index + argumentIndex * 17
+                        : unchecked((int)(argumentRandom.NextUInt64() & 0x7FFFFFFFUL));
+                    return GeneratedValueFactory.Create(
                         parameter.ParameterType,
-                        random.Fork(argumentIndex),
+                        argumentRandom,
                         depth: 0,
                         maxDepth: DefaultMaxDepth,
                         maxCollectionItems: DefaultMaxCollectionItems,
-                        variant: index + argumentIndex * 17))
+                        variant);
+                })
                 .ToArray();
             scenarios.Add(new GeneratedScenario(index, seed, arguments));
         }

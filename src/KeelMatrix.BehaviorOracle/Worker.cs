@@ -219,6 +219,8 @@ internal sealed class WorkerRunner
         Directory.CreateDirectory(tempPath);
         using var process = new Process();
         process.StartInfo = BuildStartInfo(tempPath);
+        Task<BoundedText>? standardOutputTask = null;
+        Task<BoundedText>? standardErrorTask = null;
         try
         {
             if (!process.Start())
@@ -238,27 +240,35 @@ internal sealed class WorkerRunner
             await process.StandardInput.FlushAsync(CancellationToken.None).ConfigureAwait(false);
             process.StandardInput.Close();
 
-            var standardOutputTask = ReadBoundedAsync(process.StandardOutput, options.MaxStdoutBytes);
-            var standardErrorTask = ReadBoundedAsync(process.StandardError, options.MaxStderrBytes);
+            standardOutputTask = ReadBoundedAsync(process.StandardOutput, options.MaxStdoutBytes);
+            standardErrorTask = ReadBoundedAsync(process.StandardError, options.MaxStderrBytes);
             var exitTask = process.WaitForExitAsync(CancellationToken.None);
             var timeoutTask = Task.Delay(options.WorkerTimeoutMilliseconds, cancellationToken);
             var completed = await Task.WhenAny(exitTask, timeoutTask).ConfigureAwait(false);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                TryKill(process);
+                await DrainOutputAsync(standardOutputTask, standardErrorTask).ConfigureAwait(false);
+                return new WorkerResponse(false, null, "cancelled");
+            }
+
             if (completed != exitTask)
             {
                 TryKill(process);
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return new WorkerResponse(false, null, "cancelled");
-                }
-
+                await DrainOutputAsync(standardOutputTask, standardErrorTask).ConfigureAwait(false);
                 return new WorkerResponse(false, null, "timeout");
             }
 
             var output = await standardOutputTask.ConfigureAwait(false);
-            _ = await standardErrorTask.ConfigureAwait(false);
+            var error = await standardErrorTask.ConfigureAwait(false);
             if (output.ExceededLimit)
             {
                 return new WorkerResponse(false, null, "stdout-limit", output.Bytes);
+            }
+
+            if (error.ExceededLimit)
+            {
+                return new WorkerResponse(false, null, "stderr-limit", error.Bytes);
             }
 
             if (process.ExitCode != 0)
@@ -282,6 +292,11 @@ internal sealed class WorkerRunner
         finally
         {
             TryKill(process);
+            if (standardOutputTask is not null && standardErrorTask is not null)
+            {
+                await DrainOutputAsync(standardOutputTask, standardErrorTask).ConfigureAwait(false);
+            }
+
             TryDelete(tempPath);
         }
     }
@@ -359,17 +374,39 @@ internal sealed class WorkerRunner
         }
     }
 
-    private static void TryDelete(string path)
+    private static async Task DrainOutputAsync(
+        Task<BoundedText> standardOutputTask,
+        Task<BoundedText> standardErrorTask)
     {
         try
         {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, recursive: true);
-            }
+            await Task.WhenAll(standardOutputTask, standardErrorTask)
+                .WaitAsync(TimeSpan.FromSeconds(1))
+                .ConfigureAwait(false);
         }
         catch
         {
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                if (!Directory.Exists(path))
+                {
+                    return;
+                }
+
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch
+            {
+                Thread.Sleep(10);
+            }
         }
     }
 

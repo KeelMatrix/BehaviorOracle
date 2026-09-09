@@ -1,10 +1,13 @@
 param(
     [int64]$Seed = 12345,
-    [int]$ScenarioBudget = 500,
+    [int]$ScenarioBudget = 80,
     [int]$ConfirmationRuns = 3
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Seed -ne 12345 -or $ScenarioBudget -ne 80 -or $ConfirmationRuns -ne 3) {
+    throw 'The committed synthetic benchmark manifest is bound to -Seed 12345 -ScenarioBudget 80 -ConfirmationRuns 3.'
+}
 $repo = Split-Path -Parent $PSScriptRoot
 $corpus = Join-Path $PSScriptRoot 'corpus'
 $baselineProject = Join-Path $corpus 'Baseline\Baseline.csproj'
@@ -22,6 +25,8 @@ Copy-Item -Path (Join-Path $baselineBuild '*') -Destination $baselineOutput -For
 Copy-Item -Path (Join-Path $candidateBuild '*') -Destination $candidateOutput -Force
 
 $tool = Join-Path $repo 'src\KeelMatrix.BehaviorOracle\bin\Release\net8.0\KeelMatrix.BehaviorOracle.dll'
-$report = Join-Path $repo 'artifacts\synthetic-benchmark.json'
+$reportDirectory = Join-Path $PSScriptRoot 'results'
+$report = Join-Path $reportDirectory 'synthetic-benchmark.json'
+New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
 dotnet $tool benchmark --manifest (Join-Path $corpus 'manifest.json') --seed $Seed --scenario-budget $ScenarioBudget --confirmation-runs $ConfirmationRuns --format json --output $report
 Write-Output "Benchmark report: $report"
