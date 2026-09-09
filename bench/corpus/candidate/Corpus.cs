@@ -49,6 +49,10 @@ public static class SemanticChanges
 
     public static string Nondeterministic() => Guid.NewGuid().ToString("D");
 
+    public static DateTime Today() => DateTime.Today;
+
+    public static int ReadReferencedEnvironment() => HiddenStateBridge.ReadEnvironment();
+
     public static string ReadExternal(Stream stream) => stream.Length.ToString(CultureInfo.InvariantCulture);
 
     public static int TierValue(CustomerTier tier) => (int)tier;

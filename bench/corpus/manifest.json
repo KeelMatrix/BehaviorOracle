@@ -16,7 +16,10 @@
     "BehaviorOracleCorpus.SemanticChanges::Nondeterministic()->System.String"
   ],
   "unsupportedSignatures": [
-    "BehaviorOracleCorpus.SemanticChanges::ReadExternal(System.IO.Stream)->System.String"
+    "BehaviorOracleCorpus.SemanticChanges::ReadExternal(System.IO.Stream)->System.String",
+    "BehaviorOracleCorpus.SemanticChanges::Today()->System.DateTime",
+    "BehaviorOracleCorpus.SemanticChanges::ReadReferencedEnvironment()->System.Int32",
+    "BehaviorOracleCorpus.HiddenStateBridge::ReadEnvironment()->System.Int32"
   ],
   "equivalentControlSignatures": [
     "BehaviorOracleCorpus.Calculator::Add(System.Int32,System.Int32)->System.Int32",
@@ -88,6 +91,9 @@
     { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::Parse(System.Int32)->System.Int32", "scenarioIndex": 6, "expectedOutcome": "EQUIVALENT" },
     { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::Parse(System.Int32)->System.Int32", "scenarioIndex": 7, "expectedOutcome": "EQUIVALENT" },
     { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::ReadExternal(System.IO.Stream)->System.String", "scenarioIndex": -1, "expectedOutcome": "SKIPPED" },
+    { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::Today()->System.DateTime", "scenarioIndex": -1, "expectedOutcome": "SKIPPED" },
+    { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::ReadReferencedEnvironment()->System.Int32", "scenarioIndex": -1, "expectedOutcome": "SKIPPED" },
+    { "apiSignature": "BehaviorOracleCorpus.HiddenStateBridge::ReadEnvironment()->System.Int32", "scenarioIndex": -1, "expectedOutcome": "SKIPPED" },
     { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::TierValue(BehaviorOracleCorpus.CustomerTier)->System.Int32", "scenarioIndex": 0, "expectedOutcome": "EQUIVALENT" },
     { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::TierValue(BehaviorOracleCorpus.CustomerTier)->System.Int32", "scenarioIndex": 1, "expectedOutcome": "EQUIVALENT" },
     { "apiSignature": "BehaviorOracleCorpus.SemanticChanges::TierValue(BehaviorOracleCorpus.CustomerTier)->System.Int32", "scenarioIndex": 2, "expectedOutcome": "EQUIVALENT" },

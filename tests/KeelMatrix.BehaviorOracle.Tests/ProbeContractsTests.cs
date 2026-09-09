@@ -51,6 +51,14 @@ public static class ProbeFixture
 
     public static int ReadsFile() => File.Exists("fixture.txt") ? 1 : 0;
 
+    public static DateTime Today() => DateTime.Today;
+
+    public static DateTimeOffset UtcNow() => DateTimeOffset.UtcNow;
+
+    public static int RandomValue() => Random.Shared.Next();
+
+    public static string CurrentCultureName() => System.Globalization.CultureInfo.CurrentCulture.Name;
+
     public static int ExitWithoutResponse()
     {
         Environment.Exit(17);
@@ -149,6 +157,23 @@ public sealed class SurfaceDiscoveryTests
 
         Assert.Equal(names.Length, descriptors.Length);
         Assert.All(descriptors, descriptor => Assert.False(descriptor.IsSupported));
+    }
+
+    [Fact]
+    public void Clock_reads_are_skipped_instead_of_claimed_supported()
+    {
+        var method = typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.Today))!;
+
+        Assert.NotNull(TypeSupport.UnsupportedReason(method));
+    }
+
+    [Fact]
+    public void Other_hidden_state_reads_are_skipped_instead_of_claimed_supported()
+    {
+        var names = new[] { nameof(ProbeFixture.UtcNow), nameof(ProbeFixture.RandomValue), nameof(ProbeFixture.CurrentCultureName) };
+        var methods = names.Select(name => typeof(ProbeFixture).GetMethod(name)!).ToArray();
+
+        Assert.All(methods, method => Assert.NotNull(TypeSupport.UnsupportedReason(method)));
     }
 }
 

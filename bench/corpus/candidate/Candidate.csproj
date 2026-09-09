@@ -6,4 +6,7 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HiddenState\HiddenState.csproj" />
+  </ItemGroup>
 </Project>

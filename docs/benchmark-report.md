@@ -18,29 +18,29 @@ The comparison median is the median of the 80 generated scenario comparison timi
 
 The baseline and candidate assemblies have identical public signatures. The candidate contains eight planted semantic changes: numeric threshold (`Bucket`), null/default string behavior (`Normalize`), exception type (`Parse`), collection order (`Ordered`), argument mutation (`Mutate`), `Task<T>` and `ValueTask<T>` results, and a constructible POCO graph threshold (`Calculator.Apply`). `Calculator.Add` and `TierValue` are unchanged equivalent controls in the same pair.
 
-The corpus also contains a `Guid`-based nondeterministic method and a `Stream`-accepting method. The former must be inconclusive; the latter must be skipped. The manifest records all 81 expected scenario addresses and outcomes, including the one skipped API address.
+The corpus also contains a `Guid`-based nondeterministic method, a `Stream`-accepting method, a direct `DateTime.Today` method, and a method that delegates to `Environment.GetEnvironmentVariable` in the referenced `HiddenStateBridge` assembly. The nondeterministic method is inconclusive. The other four matched API pairs are skipped, including the referenced helper itself. The manifest records all 84 expected scenario addresses and outcomes.
 
 ## Synthetic measurements
 
 | Measurement | Result |
 | --- | ---: |
-| Discovered callable APIs | 12 baseline / 12 candidate |
+| Discovered callable APIs | 15 baseline / 15 candidate |
 | Eligible supported API pairs | 11 |
 | APIs actually exercised | 11 |
-| Supported API percentage | 91.67% (11/12) |
+| Supported API percentage | 73.33% (11/15) |
 | Generated scenarios | 80 |
 | Stable scenarios | 73 |
-| Expected scenario classifications | 81 |
+| Expected scenario classifications | 84 |
 | Divergence scenarios | 32 |
 | Clean equivalent-control scenarios | 41 |
 | Nondeterministic/inconclusive scenarios | 7 |
-| Skipped unsupported API scenarios | 1 |
+| Skipped unsupported API scenarios | 4 |
 | Execution failures | 0 |
 | False divergence scenarios | 0 |
 | Precision | 100% |
 | Recall of expected divergence scenarios | 100% |
-| Median comparison time | 819.7548 ms |
-| Median witness-minimization time | 0.0303 ms |
+| Median comparison time | 1091.8351 ms |
+| Median witness-minimization time | 0.0335 ms |
 | Smallest minimized witness size | 0 arguments (`Ordered`) |
 | Divergence scenarios with a minimized witness | 32/32 |
 | Unsupported/inconclusive rate | 8.75% (7/80 generated scenarios) |
@@ -49,9 +49,9 @@ The benchmark runner compares every raw scenario result with the manifest. It se
 
 ## Support boundary and worker protocol
 
-Support is now filtered at the method level as well as by parameter and return type. The conservative method-body check rejects mutable static field access and calls into filesystem, environment, process, network, database, registry, or console APIs. Same-assembly helper calls are inspected recursively to catch hidden mutable static state. Immutable primitive and string constants remain eligible.
+Support is now filtered at the method level as well as by parameter and return type. The deny-by-default method-body check rejects mutable static field access, clock/time, randomness, culture, threading/timing, filesystem, environment, process, network, database, registry, or console APIs. Resolved user-assembly callees and type initializers are inspected recursively; unresolved or non-allowlisted platform calls are skipped. Immutable primitive and string constants remain eligible. This closes the demonstrated `DateTime.Today` class and the referenced-assembly environment class without treating stable same-day observations as evidence.
 
-Each confirmation uses a disposable worker process with bounded stdout/stderr, timeout, and process-tree termination. Fresh workers prove only that the bounded observation was stable across those independent runs. Unknown external-state mechanisms that evade the method-body filter can still be masked by fresh-worker isolation; they remain outside the claimed coverage rather than being treated as proof of equivalence. A crash, timeout, cancellation, output overflow, or unrepresentable observation is a failure or conservative non-result.
+Each confirmation uses a disposable worker process with bounded stdout/stderr, timeout, and process-tree termination. Fresh workers prove only that the bounded observation was stable across those independent runs. The conservative boundary intentionally shrank API support from the previous 91.67% (11/12) to 73.33% (11/15) after adding explicit hidden-state fixtures; precision/recall remain 100% within the honest supported domain, while unsupported API coverage is now visible as four skipped pairs. The generated-scenario unsupported/inconclusive rate remains 8.75% because skipped APIs are not generated; the report must not treat that number as the full API support rate. A crash, timeout, cancellation, output overflow, or unrepresentable observation is a failure or conservative non-result.
 
 ## Real-target evidence status
 
@@ -59,4 +59,4 @@ The historical Redaction, MockHttp, Newtonsoft.Json, and QueryWatch rows from th
 
 ## Go-gate interpretation
 
-The synthetic precision, recall, witness, runtime, and conservative-classification criteria pass for this bounded corpus. The real-library-value criterion is **UNVERIFIED**, not passed, because the historical real-target spot checks were deliberately excluded. Independent review and the durable-engineering decision remain required; this report does not establish package, CI, telemetry, cross-platform, or release readiness.
+The synthetic precision, recall, witness, runtime, and conservative-classification criteria pass for this bounded corpus. The honest supported-domain percentage is 73.33%, so the report does not claim a nominal coverage threshold for breadth; narrowing the domain is the correct response to hidden-state risk. The real-library-value criterion is **UNVERIFIED**, not passed, because the historical real-target spot checks were deliberately excluded. Independent review and the durable-engineering decision remain required; this report does not establish package, CI, telemetry, cross-platform, or release readiness.
