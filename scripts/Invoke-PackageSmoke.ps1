@@ -1,20 +1,20 @@
 param(
     [long]$Seed = 12345,
     [int]$ScenarioBudget = 20,
-    [int]$ConfirmationRuns = 2
+    [int]$ConfirmationRuns = 2,
+    [string]$PackagePath
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$smokeRoot = Join-Path $repo 'artifacts\package-smoke'
+$smokeRoot = [IO.Path]::Combine($repo, 'artifacts', 'package-smoke')
 $packageFeed = Join-Path $smokeRoot 'packages'
 $installRoot = Join-Path $smokeRoot 'install'
 $baselineOutput = Join-Path $smokeRoot 'baseline'
 $candidateOutput = Join-Path $smokeRoot 'candidate'
 $reportRoot = Join-Path $smokeRoot 'reports'
 $config = Join-Path $smokeRoot 'oracle.json'
-$project = Join-Path $repo 'src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj'
-$tool = Join-Path $installRoot 'behavior-oracle.exe'
+$project = [IO.Path]::Combine($repo, 'src', 'KeelMatrix.BehaviorOracle', 'KeelMatrix.BehaviorOracle.csproj')
 
 function Invoke-Checked {
     param(
@@ -31,7 +31,7 @@ function Invoke-Checked {
 function Invoke-Tool {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
 
-    $output = (& $tool @Arguments 2>&1 | Out-String).TrimEnd()
+    $output = (& $toolPath @Arguments 2>&1 | Out-String).TrimEnd()
     [PSCustomObject]@{
         ExitCode = $LASTEXITCODE
         Output = $output
@@ -54,14 +54,31 @@ $oldTelemetryOptOut = [Environment]::GetEnvironmentVariable('KEELMATRIX_NO_TELEM
 try {
     [Environment]::SetEnvironmentVariable('KEELMATRIX_NO_TELEMETRY', '1')
 
-    Invoke-Checked 'dotnet' @('restore', (Join-Path $repo 'KeelMatrix.BehaviorOracle.sln'), '--configfile', (Join-Path $repo 'NuGet.config'))
-    Invoke-Checked 'dotnet' @('build', (Join-Path $repo 'bench\corpus\baseline\Baseline.csproj'), '-c', 'Release', '--no-restore')
-    Invoke-Checked 'dotnet' @('build', (Join-Path $repo 'bench\corpus\candidate\Candidate.csproj'), '-c', 'Release', '--no-restore')
-    Invoke-Checked 'dotnet' @('build', $project, '-c', 'Release', '--no-restore')
-    Invoke-Checked 'dotnet' @('pack', $project, '-c', 'Release', '--no-build', '-o', $packageFeed, '-p:PackageVersion=0.1.0')
+    $solution = [IO.Path]::Combine($repo, 'KeelMatrix.BehaviorOracle.sln')
+    $nugetConfig = [IO.Path]::Combine($repo, 'NuGet.config')
+    $baselineProject = [IO.Path]::Combine($repo, 'bench', 'corpus', 'baseline', 'Baseline.csproj')
+    $candidateProject = [IO.Path]::Combine($repo, 'bench', 'corpus', 'candidate', 'Candidate.csproj')
+    $baselineBuild = [IO.Path]::Combine($repo, 'bench', 'corpus', 'baseline', 'bin', 'Release', 'net8.0')
+    $candidateBuild = [IO.Path]::Combine($repo, 'bench', 'corpus', 'candidate', 'bin', 'Release', 'net8.0')
 
-    Copy-Item (Join-Path $repo 'bench\corpus\baseline\bin\Release\net8.0\*.dll') $baselineOutput -Force
-    Copy-Item (Join-Path $repo 'bench\corpus\candidate\bin\Release\net8.0\*.dll') $candidateOutput -Force
+    Invoke-Checked 'dotnet' @('restore', $solution, '--configfile', $nugetConfig, '-p:NuGetAudit=false')
+    Invoke-Checked 'dotnet' @('build', $baselineProject, '-c', 'Release', '--no-restore')
+    Invoke-Checked 'dotnet' @('build', $candidateProject, '-c', 'Release', '--no-restore')
+
+    if ([string]::IsNullOrWhiteSpace($PackagePath)) {
+        Invoke-Checked 'dotnet' @('build', $project, '-c', 'Release', '--no-restore')
+        Invoke-Checked 'dotnet' @('pack', $project, '-c', 'Release', '--no-build', '-o', $packageFeed, '-p:PackageVersion=0.1.0')
+    }
+    else {
+        if (-not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) {
+            throw "Packed tool package was not found: $PackagePath"
+        }
+
+        Copy-Item -LiteralPath $PackagePath -Destination $packageFeed -Force
+    }
+
+    Copy-Item (Join-Path $baselineBuild '*.dll') $baselineOutput -Force
+    Copy-Item (Join-Path $candidateBuild '*.dll') $candidateOutput -Force
     $nupkg = Join-Path $packageFeed 'KeelMatrix.BehaviorOracle.0.1.0.nupkg'
     Assert-True (Test-Path -LiteralPath $nupkg -PathType Leaf) "Expected package was not created: $nupkg"
 
@@ -73,7 +90,10 @@ try {
     } | ConvertTo-Json -Compress | Set-Content -LiteralPath $config -NoNewline
 
     Invoke-Checked 'dotnet' @('tool', 'install', '--tool-path', $installRoot, 'KeelMatrix.BehaviorOracle', '--version', '0.1.0', '--add-source', $packageFeed, '--add-source', 'https://api.nuget.org/v3/index.json', '--ignore-failed-sources')
-    Assert-True (Test-Path -LiteralPath $tool -PathType Leaf) "Installed tool was not found: $tool"
+    $toolPath = Get-ChildItem -LiteralPath $installRoot -File |
+        Where-Object { $_.BaseName -eq 'behavior-oracle' } |
+        Select-Object -First 1 -ExpandProperty FullName
+    Assert-True (-not [string]::IsNullOrWhiteSpace($toolPath)) "Installed tool was not found in $installRoot"
 
     $equivalent = Invoke-Tool @('compare', '--baseline', $baselineOutput, '--candidate', $baselineOutput, '--config', $config, '--format', 'console')
     Assert-True ($equivalent.ExitCode -eq 0) "Equivalent package comparison returned $($equivalent.ExitCode). Output: $($equivalent.Output)"
