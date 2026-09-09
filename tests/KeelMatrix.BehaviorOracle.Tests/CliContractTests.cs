@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using Xunit;
 
 namespace KeelMatrix.BehaviorOracle.Tests;
@@ -58,6 +59,32 @@ public sealed class CliContractTests
     }
 
     [Fact]
+    public async Task Identical_narrow_integer_artifacts_exit_zero_for_every_surface()
+    {
+        using var fixture = SelfComparisonFixture.Create();
+        var result = await RunAsync(
+            fixture.Baseline,
+            fixture.Candidate,
+            fixture.Config,
+            ["compare", "--baseline", fixture.Baseline, "--candidate", fixture.Candidate, "--config", fixture.Config, "--format", "json"]);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("\"resultState\":\"EQUIVALENT_WITHIN_TESTED_DOMAIN\"", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("\"executionFailureCount\":0", result.Stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"classification\":\"FAILURE\"", result.Stdout, StringComparison.Ordinal);
+
+        var report = ObservationCodec.Deserialize<ProbeReport>(result.Stdout)!;
+        foreach (var method in typeof(global::BehaviorOracle.NarrowIntegerSurface.NarrowIntegerSurface).GetMethods(BindingFlags.Public | BindingFlags.Static))
+        {
+            var signature = TypeNames.Method(method);
+            Assert.Contains(report.ScenarioResults, scenario =>
+                scenario.ApiSignature == signature &&
+                scenario.ScenarioIndex >= 0 &&
+                scenario.Classification == "EQUIVALENT");
+        }
+    }
+
+    [Fact]
     public async Task Invalid_config_version_is_a_configuration_failure()
     {
         using var fixture = ComparisonFixture.Create(equalArtifacts: true);
@@ -73,6 +100,13 @@ public sealed class CliContractTests
     }
 
     private static async Task<CliResult> RunAsync(ComparisonFixture fixture, IReadOnlyList<string> arguments)
+        => await RunAsync(fixture.Baseline, fixture.Candidate, fixture.Config, arguments);
+
+    private static async Task<CliResult> RunAsync(
+        string baseline,
+        string candidate,
+        string config,
+        IReadOnlyList<string> arguments)
     {
         await ConsoleLock.WaitAsync();
         var oldOut = Console.Out;
@@ -100,6 +134,38 @@ public sealed class CliContractTests
     }
 
     private sealed record CliResult(int ExitCode, string Stdout, string Stderr);
+
+    private sealed class SelfComparisonFixture : IDisposable
+    {
+        private readonly DirectoryInfo root;
+
+        private SelfComparisonFixture(DirectoryInfo root, string baseline, string candidate, string config)
+        {
+            this.root = root;
+            Baseline = baseline;
+            Candidate = candidate;
+            Config = config;
+        }
+
+        public string Baseline { get; }
+        public string Candidate { get; }
+        public string Config { get; }
+
+        public static SelfComparisonFixture Create()
+        {
+            var root = Directory.CreateTempSubdirectory("behavior-oracle-self-compare-");
+            var baseline = Directory.CreateDirectory(Path.Combine(root.FullName, "baseline")).FullName;
+            var candidate = Directory.CreateDirectory(Path.Combine(root.FullName, "candidate")).FullName;
+            var assembly = typeof(global::BehaviorOracle.NarrowIntegerSurface.NarrowIntegerSurface).Assembly.Location;
+            File.Copy(assembly, Path.Combine(baseline, Path.GetFileName(assembly)));
+            File.Copy(assembly, Path.Combine(candidate, Path.GetFileName(assembly)));
+            var config = Path.Combine(root.FullName, "oracle.json");
+            File.WriteAllText(config, "{\"version\":1,\"seed\":12345,\"scenarioBudget\":40,\"confirmationRuns\":2}");
+            return new SelfComparisonFixture(root, baseline, candidate, config);
+        }
+
+        public void Dispose() => root.Delete(recursive: true);
+    }
 
     private sealed class ComparisonFixture : IDisposable
     {

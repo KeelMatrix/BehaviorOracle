@@ -188,12 +188,14 @@ internal static class GeneratedValueFactory
 
         if (IsInteger(type))
         {
-            var choices = new long[] { 0, 100, -1, 1, 101, 99, 2, 10, 1000, int.MaxValue, int.MinValue };
+            var choices = IntegerChoices(type);
+            var choice = choices[variant % choices.Length];
             return new GeneratedValue
             {
                 Kind = GeneratedValueKind.Integer,
                 TypeName = TypeNames.For(type),
-                IntegerValue = choices[variant % choices.Length]
+                IntegerValue = choice.SignedValue,
+                UnsignedIntegerValue = choice.UnsignedValue
             };
         }
 
@@ -214,20 +216,50 @@ internal static class GeneratedValueFactory
         {
             var length = Math.Min(maxCollectionItems, variant % 4);
             var items = new List<GeneratedValue>(length);
+            var keys = new HashSet<string>(StringComparer.Ordinal);
             for (var index = 0; index < length; index++)
             {
-                var item = keyType is not null
-                    ? new GeneratedValue
+                GeneratedValue item;
+                if (keyType is null)
+                {
+                    item = Create(elementType!, random.Fork(index), depth + 1, maxDepth, maxCollectionItems, variant + index + 1);
+                }
+                else
+                {
+                    GeneratedValue? key = null;
+                    for (var attempt = 0; attempt < Math.Max(4, maxCollectionItems * 2); attempt++)
+                    {
+                        var candidate = Create(
+                            keyType,
+                            random.Fork(index * 2 + attempt),
+                            depth + 1,
+                            maxDepth,
+                            maxCollectionItems,
+                            variant + index + attempt);
+                        if (candidate.Kind != GeneratedValueKind.Null && keys.Add(ObservationCodec.Serialize(candidate)))
+                        {
+                            key = candidate;
+                            break;
+                        }
+                    }
+
+                    if (key is null)
+                    {
+                        break;
+                    }
+
+                    item = new GeneratedValue
                     {
                         Kind = GeneratedValueKind.Object,
                         TypeName = "System.Collections.Generic.KeyValuePair",
                         Members = new Dictionary<string, GeneratedValue>(StringComparer.Ordinal)
                         {
-                            ["Key"] = Create(keyType, random.Fork(index * 2), depth + 1, maxDepth, maxCollectionItems, variant + index),
+                            ["Key"] = key,
                             ["Value"] = Create(valueType!, random.Fork(index * 2 + 1), depth + 1, maxDepth, maxCollectionItems, variant + index + 1)
                         }
-                    }
-                    : Create(elementType!, random.Fork(index), depth + 1, maxDepth, maxCollectionItems, variant + index + 1);
+                    };
+                }
+
                 items.Add(item);
             }
 
@@ -300,6 +332,48 @@ internal static class GeneratedValueFactory
         type == typeof(int) || type == typeof(uint) ||
         type == typeof(long) || type == typeof(ulong) ||
         type == typeof(nint) || type == typeof(nuint);
+
+    private static IntegerChoice[] IntegerChoices(Type type) =>
+        type switch
+        {
+            _ when type == typeof(byte) =>
+            [0, 100, 1, 101, 99, 2, 10, byte.MaxValue],
+            _ when type == typeof(sbyte) =>
+            [0, 100, -1, 1, 101, 99, 2, 10, sbyte.MinValue, sbyte.MaxValue],
+            _ when type == typeof(short) =>
+            [0, 100, -1, 1, 101, 99, 2, 10, 1000, short.MinValue, short.MaxValue],
+            _ when type == typeof(ushort) =>
+            [0, 100, 1, 101, 99, 2, 10, 1000, 32767, 32768, ushort.MaxValue],
+            _ when type == typeof(int) =>
+            [0, 100, -1, 1, 101, 99, 2, 10, 1000, int.MaxValue, int.MinValue],
+            _ when type == typeof(uint) =>
+            [0, 100, 1, 101, 99, 2, 10, 1000, int.MaxValue, (long)int.MaxValue + 1, uint.MaxValue],
+            _ when type == typeof(long) =>
+            [0, 100, -1, 1, 101, 99, 2, 10, 1000, long.MaxValue, long.MinValue],
+            _ when type == typeof(ulong) =>
+            [0, 100, 1, 101, 99, 2, 10, 1000, long.MaxValue, IntegerChoice.Unsigned(long.MaxValue + 1UL), IntegerChoice.Unsigned(ulong.MaxValue)],
+            _ when type == typeof(nint) && IntPtr.Size == 4 =>
+            [0, 100, -1, 1, 101, 99, 2, 10, 1000, int.MaxValue, int.MinValue],
+            _ when type == typeof(nint) =>
+            [0, 100, -1, 1, 101, 99, 2, 10, 1000, long.MaxValue, long.MinValue],
+            _ when type == typeof(nuint) && IntPtr.Size == 4 =>
+            [0, 100, 1, 101, 99, 2, 10, 1000, int.MaxValue, (long)int.MaxValue + 1, uint.MaxValue],
+            _ when type == typeof(nuint) =>
+            [0, 100, 1, 101, 99, 2, 10, 1000, long.MaxValue, IntegerChoice.Unsigned(long.MaxValue + 1UL), IntegerChoice.Unsigned(ulong.MaxValue)],
+            _ => throw new InvalidOperationException($"Unsupported integer type {type.FullName}.")
+        };
+
+    private readonly record struct IntegerChoice(long SignedValue, ulong? UnsignedValue)
+    {
+        public static implicit operator IntegerChoice(byte value) => new(value, null);
+        public static implicit operator IntegerChoice(sbyte value) => new(value, null);
+        public static implicit operator IntegerChoice(short value) => new(value, null);
+        public static implicit operator IntegerChoice(ushort value) => new(value, null);
+        public static implicit operator IntegerChoice(int value) => new(value, null);
+        public static implicit operator IntegerChoice(long value) => new(value, null);
+        public static implicit operator IntegerChoice(uint value) => new(value, null);
+        public static IntegerChoice Unsigned(ulong value) => new(0, value);
+    }
 }
 
 internal static class ReflectionLookup

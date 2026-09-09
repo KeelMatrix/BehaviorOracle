@@ -491,6 +491,15 @@ internal static class TypeSupport
             return UnsupportedReason(type.GetElementType()!, visiting, depth + 1);
         }
 
+        var enumerableElementType = GenericEnumerableElementType(type);
+        if (enumerableElementType is not null && !TryGetCollectionShape(type, out _, out _, out _))
+        {
+            var elementReason = UnsupportedReason(enumerableElementType, visiting, depth + 1);
+            return elementReason is null
+                ? "no deterministic public collection construction path exists"
+                : $"collection element is unsupported: {elementReason}";
+        }
+
         if (TryGetCollectionShape(type, out var elementType, out var keyType, out var valueType))
         {
             if (keyType is not null)
@@ -557,8 +566,14 @@ internal static class TypeSupport
             var args = type.GetGenericArguments();
             if (args.Length == 1 &&
                 (definition == typeof(List<>) ||
-                 definition == typeof(HashSet<>) ||
-                 definition == typeof(IList<>) ||
+                 definition == typeof(HashSet<>)))
+            {
+                elementType = args[0];
+                return HasConstructiblePublicPath(type) && HasPublicAdd(type, elementType);
+            }
+
+            if (args.Length == 1 &&
+                (definition == typeof(IList<>) ||
                  definition == typeof(ICollection<>) ||
                  definition == typeof(IEnumerable<>) ||
                  definition == typeof(IReadOnlyCollection<>) ||
@@ -580,11 +595,11 @@ internal static class TypeSupport
             }
         }
 
-        var enumerable = type.GetInterfaces()
-            .FirstOrDefault(static candidate =>
-                candidate.IsGenericType &&
-                candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>));
-        if (enumerable is not null && type.IsPublic)
+        var enumerable = GenericEnumerableInterface(type);
+        if (enumerable is not null &&
+            (type.IsPublic || type.IsNestedPublic) &&
+            HasConstructiblePublicPath(type) &&
+            HasPublicAdd(type, enumerable.GetGenericArguments()[0]))
         {
             elementType = enumerable.GetGenericArguments()[0];
             return true;
@@ -593,12 +608,29 @@ internal static class TypeSupport
         return false;
     }
 
+    private static Type? GenericEnumerableElementType(Type type) =>
+        GenericEnumerableInterface(type)?.GetGenericArguments()[0];
+
+    private static Type? GenericEnumerableInterface(Type type) =>
+        type.GetInterfaces()
+            .FirstOrDefault(static candidate =>
+                candidate.IsGenericType &&
+                candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
     public static bool HasConstructiblePublicPath(Type type) =>
         type.IsValueType ||
         type.GetConstructor(
             BindingFlags.Public | BindingFlags.Instance,
             binder: null,
             Type.EmptyTypes,
+            modifiers: null) is not null;
+
+    private static bool HasPublicAdd(Type type, Type elementType) =>
+        type.GetMethod(
+            "Add",
+            BindingFlags.Public | BindingFlags.Instance,
+            binder: null,
+            [elementType],
             modifiers: null) is not null;
 
     public static IReadOnlyList<WritableMember> WritableMembers(Type type) =>

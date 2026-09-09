@@ -151,7 +151,7 @@ internal static class Program
         {
             GeneratedValueKind.Null => "null",
             GeneratedValueKind.Boolean => value.BooleanValue ? "true" : "false",
-            GeneratedValueKind.Integer => value.IntegerValue.ToString(CultureInfo.InvariantCulture),
+            GeneratedValueKind.Integer => value.UnsignedIntegerValue?.ToString(CultureInfo.InvariantCulture) ?? value.IntegerValue.ToString(CultureInfo.InvariantCulture),
             GeneratedValueKind.FloatingPoint => value.FloatingPointValue.ToString("R", CultureInfo.InvariantCulture),
             GeneratedValueKind.Decimal => value.TextValue ?? "0",
             GeneratedValueKind.String => JsonSerializer.Serialize(value.TextValue ?? string.Empty),

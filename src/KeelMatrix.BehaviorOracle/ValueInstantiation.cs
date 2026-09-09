@@ -78,7 +78,7 @@ internal static class ValueInstantiator
 
         if (IsInteger(expectedType))
         {
-            return Convert.ChangeType(value.IntegerValue, expectedType, CultureInfo.InvariantCulture);
+            return CreateInteger(value, expectedType);
         }
 
         if (expectedType == typeof(DateTime))
@@ -182,7 +182,7 @@ internal static class ValueInstantiator
         }
 
         var concreteType = expectedType.IsInterface || expectedType.IsAbstract
-            ? typeof(List<>).MakeGenericType(elementType!)
+            ? GetInterfaceCollectionType(expectedType, elementType!)
             : expectedType;
         var collection = Activator.CreateInstance(concreteType) ??
             throw new ValueInstantiationException("collection construction failed");
@@ -200,11 +200,63 @@ internal static class ValueInstantiator
         return collection;
     }
 
+    private static Type GetInterfaceCollectionType(Type expectedType, Type elementType)
+    {
+        var definition = expectedType.IsGenericType ? expectedType.GetGenericTypeDefinition() : null;
+        return definition == typeof(ISet<>)
+            ? typeof(HashSet<>).MakeGenericType(elementType)
+            : typeof(List<>).MakeGenericType(elementType);
+    }
+
     private static bool IsInteger(Type type) =>
         type == typeof(byte) || type == typeof(sbyte) ||
         type == typeof(short) || type == typeof(ushort) ||
         type == typeof(int) || type == typeof(uint) ||
         type == typeof(long) || type == typeof(ulong) ||
         type == typeof(nint) || type == typeof(nuint);
+
+    private static object CreateInteger(GeneratedValue value, Type expectedType)
+    {
+        try
+        {
+            if (value.UnsignedIntegerValue is ulong unsignedValue)
+            {
+                return expectedType switch
+                {
+                    _ when expectedType == typeof(byte) => checked((byte)unsignedValue),
+                    _ when expectedType == typeof(sbyte) => checked((sbyte)unsignedValue),
+                    _ when expectedType == typeof(short) => checked((short)unsignedValue),
+                    _ when expectedType == typeof(ushort) => checked((ushort)unsignedValue),
+                    _ when expectedType == typeof(int) => checked((int)unsignedValue),
+                    _ when expectedType == typeof(uint) => checked((uint)unsignedValue),
+                    _ when expectedType == typeof(long) => checked((long)unsignedValue),
+                    _ when expectedType == typeof(ulong) => unsignedValue,
+                    _ when expectedType == typeof(nint) => checked((nint)unsignedValue),
+                    _ when expectedType == typeof(nuint) => checked((nuint)unsignedValue),
+                    _ => throw new ValueInstantiationException($"unsupported integer type {expectedType.FullName}")
+                };
+            }
+
+            var signedValue = value.IntegerValue;
+            return expectedType switch
+            {
+                _ when expectedType == typeof(byte) => checked((byte)signedValue),
+                _ when expectedType == typeof(sbyte) => checked((sbyte)signedValue),
+                _ when expectedType == typeof(short) => checked((short)signedValue),
+                _ when expectedType == typeof(ushort) => checked((ushort)signedValue),
+                _ when expectedType == typeof(int) => checked((int)signedValue),
+                _ when expectedType == typeof(uint) => checked((uint)signedValue),
+                _ when expectedType == typeof(long) => signedValue,
+                _ when expectedType == typeof(ulong) => checked((ulong)signedValue),
+                _ when expectedType == typeof(nint) => checked((nint)signedValue),
+                _ when expectedType == typeof(nuint) => checked((nuint)signedValue),
+                _ => throw new ValueInstantiationException($"unsupported integer type {expectedType.FullName}")
+            };
+        }
+        catch (OverflowException)
+        {
+            throw new ValueInstantiationException($"integer value is outside the range of {expectedType.FullName}");
+        }
+    }
 }
 

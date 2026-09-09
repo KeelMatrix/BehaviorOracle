@@ -221,6 +221,7 @@ internal sealed class WorkerRunner
         process.StartInfo = BuildStartInfo(tempPath);
         Task<BoundedText>? standardOutputTask = null;
         Task<BoundedText>? standardErrorTask = null;
+        var outputLimitSource = new TaskCompletionSource<OutputLimitBreach>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
             if (!process.Start())
@@ -240,11 +241,11 @@ internal sealed class WorkerRunner
             await process.StandardInput.FlushAsync(CancellationToken.None).ConfigureAwait(false);
             process.StandardInput.Close();
 
-            standardOutputTask = ReadBoundedAsync(process.StandardOutput, options.MaxStdoutBytes);
-            standardErrorTask = ReadBoundedAsync(process.StandardError, options.MaxStderrBytes);
+            standardOutputTask = ReadBoundedAsync(process.StandardOutput, options.MaxStdoutBytes, "stdout-limit", outputLimitSource);
+            standardErrorTask = ReadBoundedAsync(process.StandardError, options.MaxStderrBytes, "stderr-limit", outputLimitSource);
             var exitTask = process.WaitForExitAsync(CancellationToken.None);
             var timeoutTask = Task.Delay(options.WorkerTimeoutMilliseconds, cancellationToken);
-            var completed = await Task.WhenAny(exitTask, timeoutTask).ConfigureAwait(false);
+            var completed = await Task.WhenAny(exitTask, timeoutTask, outputLimitSource.Task).ConfigureAwait(false);
             if (cancellationToken.IsCancellationRequested)
             {
                 TryKill(process);
@@ -254,6 +255,14 @@ internal sealed class WorkerRunner
 
             if (completed != exitTask)
             {
+                if (completed == outputLimitSource.Task)
+                {
+                    var breach = await outputLimitSource.Task.ConfigureAwait(false);
+                    TryKill(process);
+                    await DrainOutputAsync(standardOutputTask, standardErrorTask).ConfigureAwait(false);
+                    return new WorkerResponse(false, null, breach.FailureCategory, breach.Bytes);
+                }
+
                 TryKill(process);
                 await DrainOutputAsync(standardOutputTask, standardErrorTask).ConfigureAwait(false);
                 return new WorkerResponse(false, null, "timeout");
@@ -337,26 +346,41 @@ internal sealed class WorkerRunner
         return startInfo;
     }
 
-    private static async Task<BoundedText> ReadBoundedAsync(StreamReader reader, int limit)
+    private static async Task<BoundedText> ReadBoundedAsync(
+        StreamReader reader,
+        int limit,
+        string failureCategory,
+        TaskCompletionSource<OutputLimitBreach> outputLimitSource)
     {
         var buffer = new char[4096];
         var builder = new StringBuilder(Math.Min(limit, 64 * 1024));
         var bytes = 0;
-        var exceeded = false;
+        var retainedBytes = 0;
         int read;
         while ((read = await reader.ReadAsync(buffer.AsMemory()).ConfigureAwait(false)) > 0)
         {
             bytes += Encoding.UTF8.GetByteCount(buffer, 0, read);
-            if (builder.Length < limit)
+            for (var index = 0; index < read && retainedBytes < limit; index++)
             {
-                var take = Math.Min(read, limit - builder.Length);
-                builder.Append(buffer, 0, take);
+                var characterBytes = Encoding.UTF8.GetByteCount(buffer, index, 1);
+                if (retainedBytes + characterBytes > limit)
+                {
+                    break;
+                }
+
+                builder.Append(buffer[index]);
+                retainedBytes += characterBytes;
             }
 
-            exceeded |= bytes > limit;
+            if (bytes > limit)
+            {
+                var breach = new OutputLimitBreach(failureCategory, bytes);
+                outputLimitSource.TrySetResult(breach);
+                return new BoundedText(builder.ToString(), bytes, ExceededLimit: true);
+            }
         }
 
-        return new BoundedText(builder.ToString(), bytes, exceeded);
+        return new BoundedText(builder.ToString(), bytes, ExceededLimit: false);
     }
 
     private static void TryKill(Process process)
@@ -411,6 +435,7 @@ internal sealed class WorkerRunner
     }
 
     private sealed record BoundedText(string Text, int Bytes, bool ExceededLimit);
+    private sealed record OutputLimitBreach(string FailureCategory, int Bytes);
 }
 
 internal static class InvocationAwaiter

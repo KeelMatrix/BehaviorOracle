@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BehaviorOracle.NarrowIntegerSurface;
 using Xunit;
 
 namespace KeelMatrix.BehaviorOracle.Tests;
@@ -77,6 +78,16 @@ public static class ProbeFixture
     {
         Console.Error.Write(new string('e', 70_000));
         return 1;
+    }
+
+    public static int WriteSustainedStdout()
+    {
+        var chunk = new string('s', 4096);
+        while (true)
+        {
+            Console.Out.Write(chunk);
+            Console.Out.Flush();
+        }
     }
 
     public static int SpawnDescendantAndWait()
@@ -313,6 +324,123 @@ public sealed class ScenarioGenerationTests
         Assert.NotNull(reason);
         Assert.Contains("recursion", reason, StringComparison.OrdinalIgnoreCase);
     }
+
+    public static IEnumerable<object[]> Supported_integer_types()
+    {
+        yield return [nameof(NarrowIntegerSurface.AcceptByte), typeof(byte)];
+        yield return [nameof(NarrowIntegerSurface.AcceptSByte), typeof(sbyte)];
+        yield return [nameof(NarrowIntegerSurface.AcceptShort), typeof(short)];
+        yield return [nameof(NarrowIntegerSurface.AcceptUShort), typeof(ushort)];
+        yield return [nameof(NarrowIntegerSurface.AcceptInt), typeof(int)];
+        yield return [nameof(NarrowIntegerSurface.AcceptUInt), typeof(uint)];
+        yield return [nameof(NarrowIntegerSurface.AcceptLong), typeof(long)];
+        yield return [nameof(NarrowIntegerSurface.AcceptULong), typeof(ulong)];
+        yield return [nameof(NarrowIntegerSurface.AcceptNInt), typeof(nint)];
+        yield return [nameof(NarrowIntegerSurface.AcceptNUInt), typeof(nuint)];
+    }
+
+    [Theory]
+    [MemberData(nameof(Supported_integer_types))]
+    public void Every_supported_integer_width_generates_values_that_can_be_instantiated(string methodName, Type parameterType)
+    {
+        var method = typeof(NarrowIntegerSurface).GetMethod(methodName, [parameterType])!;
+        var descriptor = new ApiDescriptor(
+            TypeNames.Method(method),
+            TypeNames.For(typeof(NarrowIntegerSurface)),
+            method.Name,
+            typeof(NarrowIntegerSurface).Assembly.Location,
+            IsStatic: true,
+            IsConstructor: false,
+            method.GetParameters().Select(parameter => TypeNames.For(parameter.ParameterType)).ToArray(),
+            TypeNames.For(method.ReturnType),
+            UnsupportedReason: null);
+
+        var scenarios = ScenarioGenerator.Generate(descriptor, 64, 9876);
+
+        Assert.NotEmpty(scenarios);
+        foreach (var scenario in scenarios)
+        {
+            var instance = ValueInstantiator.Create(scenario.Arguments[0], parameterType);
+            Assert.NotNull(instance);
+            Assert.Equal(parameterType, instance.GetType());
+        }
+    }
+
+    [Fact]
+    public void Integer_instantiation_rejects_values_outside_the_expected_range()
+    {
+        var exception = Assert.Throws<ValueInstantiationException>(() => ValueInstantiator.Create(
+            new GeneratedValue
+            {
+                Kind = GeneratedValueKind.Integer,
+                TypeName = TypeNames.For(typeof(byte)),
+                IntegerValue = -1
+            },
+            typeof(byte)));
+
+        Assert.Contains("outside the range", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Read_only_custom_enumerables_are_not_admitted_as_collection_shapes()
+    {
+        Assert.False(TypeSupport.TryGetCollectionShape(typeof(ReadOnlyEnumerable), out _, out _, out _));
+        Assert.Contains("construction", TypeSupport.UnsupportedReason(typeof(ReadOnlyEnumerable)), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Public_addable_custom_enumerables_remain_supported()
+    {
+        Assert.True(TypeSupport.TryGetCollectionShape(typeof(AddableEnumerable), out var elementType, out _, out _));
+        Assert.Equal(typeof(int), elementType);
+
+        var value = GeneratedValueFactory.Create(
+            typeof(AddableEnumerable),
+            new DeterministicRandom(4),
+            depth: 0,
+            maxDepth: 3,
+            maxCollectionItems: 4,
+            variant: 3);
+
+        var instance = ValueInstantiator.Create(value, typeof(AddableEnumerable));
+
+        Assert.IsType<AddableEnumerable>(instance);
+    }
+
+    [Fact]
+    public void Interface_typed_collections_use_assignable_public_concrete_types()
+    {
+        foreach (var type in new[] { typeof(IEnumerable<byte>), typeof(ICollection<byte>), typeof(IList<byte>), typeof(IReadOnlyCollection<byte>), typeof(IReadOnlyList<byte>), typeof(ISet<byte>) })
+        {
+            var value = GeneratedValueFactory.Create(
+                type,
+                new DeterministicRandom(7),
+                depth: 0,
+                maxDepth: 3,
+                maxCollectionItems: 4,
+                variant: 3);
+
+            var instance = ValueInstantiator.Create(value, type);
+
+            Assert.NotNull(instance);
+            Assert.True(type.IsInstanceOfType(instance), $"{instance.GetType()} is not assignable to {type}.");
+        }
+    }
+
+    [Fact]
+    public void Dictionary_generation_avoids_duplicate_keys()
+    {
+        var value = GeneratedValueFactory.Create(
+            typeof(Dictionary<bool, int>),
+            new DeterministicRandom(8),
+            depth: 0,
+            maxDepth: 3,
+            maxCollectionItems: 4,
+            variant: 3);
+
+        var instance = Assert.IsType<Dictionary<bool, int>>(ValueInstantiator.Create(value, typeof(Dictionary<bool, int>)));
+        Assert.Equal(instance.Keys.Distinct().Count(), instance.Count);
+    }
 }
 
 public sealed class ObservationTests
@@ -464,6 +592,28 @@ public sealed class WorkerProcessTests
         Assert.Equal("stdout-limit", stdout.FailureCategory);
         Assert.False(stderr.Success);
         Assert.Equal("stderr-limit", stderr.FailureCategory);
+    }
+
+    [Fact]
+    public async Task Worker_terminates_sustained_output_at_the_first_bound_breach()
+    {
+        var options = new ProbeOptions(MaxStdoutBytes: 1024, MaxStderrBytes: 1024, WorkerTimeoutMilliseconds: 5000);
+        var method = typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.WriteSustainedStdout))!;
+        var before = WorkerDirectories();
+        var stopwatch = Stopwatch.StartNew();
+
+        var response = await new WorkerRunner().ExecuteAsync(
+            typeof(ProbeFixture).Assembly.Location,
+            TypeNames.Method(method),
+            new GeneratedScenario(0, 1, []),
+            options);
+
+        stopwatch.Stop();
+        Assert.False(response.Success);
+        Assert.Equal("stdout-limit", response.FailureCategory);
+        Assert.InRange(stopwatch.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(3));
+        Assert.InRange(response.OutputBytes ?? 0, 1, options.MaxStdoutBytes + 4096);
+        Assert.Equal(before, WorkerDirectories());
     }
 
     [Fact]

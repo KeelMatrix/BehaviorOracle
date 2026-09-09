@@ -69,11 +69,24 @@ internal sealed class WitnessMinimizer
         switch (value.Kind)
         {
             case GeneratedValueKind.Integer:
-                foreach (var candidate in new[] { 0L, 1L, -1L, value.IntegerValue / 2 })
+                if (value.UnsignedIntegerValue is ulong unsignedValue)
                 {
-                    if (candidate != value.IntegerValue)
+                    foreach (var candidate in new[] { 0UL, 1UL, unsignedValue / 2 })
                     {
-                        yield return value with { IntegerValue = candidate };
+                        if (candidate != unsignedValue)
+                        {
+                            yield return value with { IntegerValue = 0, UnsignedIntegerValue = candidate };
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var candidate in new[] { 0L, 1L, -1L, value.IntegerValue / 2 })
+                    {
+                        if (candidate != value.IntegerValue)
+                        {
+                            yield return value with { IntegerValue = candidate };
+                        }
                     }
                 }
 

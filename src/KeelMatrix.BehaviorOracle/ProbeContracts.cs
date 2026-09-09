@@ -40,6 +40,8 @@ internal sealed record GeneratedValue
     public string? TypeName { get; init; }
     public bool BooleanValue { get; init; }
     public long IntegerValue { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ulong? UnsignedIntegerValue { get; init; }
     public double FloatingPointValue { get; init; }
     public string? TextValue { get; init; }
     public IReadOnlyList<GeneratedValue>? Items { get; init; }

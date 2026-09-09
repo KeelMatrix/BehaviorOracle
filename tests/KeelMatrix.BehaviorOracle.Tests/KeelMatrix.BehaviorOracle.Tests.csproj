@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj" />
+    <ProjectReference Include="..\Fixtures\NarrowIntegerSurface\NarrowIntegerSurface.csproj" />
     <ProjectReference Include="..\..\bench\corpus\baseline\Baseline.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\bench\corpus\candidate\Candidate.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>

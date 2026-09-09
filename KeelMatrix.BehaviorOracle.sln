@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeelMatrix.BehaviorOracle",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeelMatrix.BehaviorOracle.Tests", "tests\KeelMatrix.BehaviorOracle.Tests\KeelMatrix.BehaviorOracle.Tests.csproj", "{4A9236AE-46D4-4772-9A1C-3CC0D3DD8C8C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NarrowIntegerSurface", "tests\Fixtures\NarrowIntegerSurface\NarrowIntegerSurface.csproj", "{B6E2A9D1-4E46-4A89-B8B7-1E40D64F6B2A}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HiddenState", "bench\corpus\HiddenState\HiddenState.csproj", "{F4E7C2F2-18C0-4D4D-AB06-733A30D0B555}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Baseline", "bench\corpus\baseline\Baseline.csproj", "{0D84A5F8-7D0E-4B22-B5C8-9D3C0BCA0A41}"
@@ -30,6 +32,10 @@ Global
 		{4A9236AE-46D4-4772-9A1C-3CC0D3DD8C8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4A9236AE-46D4-4772-9A1C-3CC0D3DD8C8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4A9236AE-46D4-4772-9A1C-3CC0D3DD8C8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6E2A9D1-4E46-4A89-B8B7-1E40D64F6B2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6E2A9D1-4E46-4A89-B8B7-1E40D64F6B2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6E2A9D1-4E46-4A89-B8B7-1E40D64F6B2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6E2A9D1-4E46-4A89-B8B7-1E40D64F6B2A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F4E7C2F2-18C0-4D4D-AB06-733A30D0B555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F4E7C2F2-18C0-4D4D-AB06-733A30D0B555}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F4E7C2F2-18C0-4D4D-AB06-733A30D0B555}.Release|Any CPU.ActiveCfg = Release|Any CPU
