@@ -1,0 +1,18 @@
+root = true
+
+[*.cs]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+dotnet_sort_system_directives_first = true
+csharp_new_line_before_open_brace = all
+
+[*.{csproj,props,targets}]
+indent_style = space
+indent_size = 2
+
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CS1591.severity = none
+

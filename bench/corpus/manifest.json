@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "baseline": "_baseline",
+  "candidate": "_candidate",
+  "plantedDivergenceSignatures": [
+    "BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>",
+    "BehaviorOracleCorpus.SemanticChanges::Bucket(System.Int32)->System.Int32",
+    "BehaviorOracleCorpus.SemanticChanges::Normalize(System.String)->System.String",
+    "BehaviorOracleCorpus.SemanticChanges::Ordered()->System.Int32[]",
+    "BehaviorOracleCorpus.SemanticChanges::Parse(System.Int32)->System.Int32",
+    "BehaviorOracleCorpus.SemanticChanges::Mutate(System.Collections.Generic.List<System.Int32>)->System.Int32",
+    "BehaviorOracleCorpus.SemanticChanges::ValueTaskResult(System.Int32)->System.Threading.Tasks.ValueTask<System.Int32>",
+    "BehaviorOracleCorpus.Calculator::Apply(BehaviorOracleCorpus.Order)->System.Int32"
+  ],
+  "nondeterministicSignatures": [
+    "BehaviorOracleCorpus.SemanticChanges::Nondeterministic()->System.String"
+  ],
+  "unsupportedSignatures": [
+    "BehaviorOracleCorpus.SemanticChanges::ReadExternal(System.IO.Stream)->System.String"
+  ]
+}

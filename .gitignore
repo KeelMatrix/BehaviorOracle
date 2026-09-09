@@ -1,0 +1,15 @@
+bin/
+obj/
+artifacts/
+.vs/
+TestResults/
+*.user
+*.suo
+*.nupkg
+*.snupkg
+*.log
+bench/corpus/**/bin/
+bench/corpus/**/obj/
+bench/corpus/_baseline/
+bench/corpus/_candidate/
+bench/corpus/**/bench/
