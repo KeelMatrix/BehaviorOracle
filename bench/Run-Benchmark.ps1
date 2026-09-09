@@ -10,12 +10,12 @@ if ($Seed -ne 12345 -or $ScenarioBudget -ne 80 -or $ConfirmationRuns -ne 3) {
 }
 $repo = Split-Path -Parent $PSScriptRoot
 $corpus = Join-Path $PSScriptRoot 'corpus'
-$baselineProject = [IO.Path]::Combine($corpus, 'Baseline', 'Baseline.csproj')
-$candidateProject = [IO.Path]::Combine($corpus, 'Candidate', 'Candidate.csproj')
+$baselineProject = [IO.Path]::Combine($corpus, 'baseline', 'Baseline.csproj')
+$candidateProject = [IO.Path]::Combine($corpus, 'candidate', 'Candidate.csproj')
 $baselineOutput = Join-Path $corpus '_baseline'
 $candidateOutput = Join-Path $corpus '_candidate'
-$baselineBuild = [IO.Path]::Combine($corpus, 'Baseline', 'bin', 'Release', 'net8.0')
-$candidateBuild = [IO.Path]::Combine($corpus, 'Candidate', 'bin', 'Release', 'net8.0')
+$baselineBuild = [IO.Path]::Combine($corpus, 'baseline', 'bin', 'Release', 'net8.0')
+$candidateBuild = [IO.Path]::Combine($corpus, 'candidate', 'bin', 'Release', 'net8.0')
 $tool = [IO.Path]::Combine($repo, 'src', 'KeelMatrix.BehaviorOracle', 'bin', 'Release', 'net8.0', 'KeelMatrix.BehaviorOracle.dll')
 
 try {
