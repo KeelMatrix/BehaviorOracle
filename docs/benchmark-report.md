@@ -14,6 +14,8 @@ This report records the reproducible synthetic feasibility evidence for the boun
 
 The comparison median is the median of the 80 generated scenario comparison timings in this one committed recipe run. Each timing includes three fresh baseline-worker confirmations and three fresh candidate-worker confirmations; witness minimization is measured separately. The minimization median is across the 32 detected divergence scenario records. These are local wall-clock measurements on the host above, not cross-machine performance claims. The report values below are copied from the raw artifact.
 
+The benchmark runner clears generated baseline/candidate build and copy directories before each run, checks both corpus build exit codes, verifies the required assemblies, and aborts with exit code `2` on build, configuration, or execution failure. A trustworthy planted-divergence result preserves the tool's exit code `1` and is reported separately from runner failure; an equivalent result uses exit code `0`.
+
 ## Synthetic corpus
 
 The baseline and candidate assemblies have identical public signatures. The candidate contains eight planted semantic changes: numeric threshold (`Bucket`), null/default string behavior (`Normalize`), exception type (`Parse`), collection order (`Ordered`), argument mutation (`Mutate`), `Task<T>` and `ValueTask<T>` results, and a constructible POCO graph threshold (`Calculator.Apply`). `Calculator.Add` and `TierValue` are unchanged equivalent controls in the same pair.

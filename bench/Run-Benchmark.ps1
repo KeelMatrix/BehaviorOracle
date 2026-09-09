@@ -14,19 +14,66 @@ $baselineProject = Join-Path $corpus 'Baseline\Baseline.csproj'
 $candidateProject = Join-Path $corpus 'Candidate\Candidate.csproj'
 $baselineOutput = Join-Path $corpus '_baseline'
 $candidateOutput = Join-Path $corpus '_candidate'
-
-dotnet build $baselineProject -c Release
-dotnet build $candidateProject -c Release
-
 $baselineBuild = Join-Path $corpus 'Baseline\bin\Release\net8.0'
 $candidateBuild = Join-Path $corpus 'Candidate\bin\Release\net8.0'
-New-Item -ItemType Directory -Path $baselineOutput,$candidateOutput -Force | Out-Null
-Copy-Item -Path (Join-Path $baselineBuild '*') -Destination $baselineOutput -Force
-Copy-Item -Path (Join-Path $candidateBuild '*') -Destination $candidateOutput -Force
-
 $tool = Join-Path $repo 'src\KeelMatrix.BehaviorOracle\bin\Release\net8.0\KeelMatrix.BehaviorOracle.dll'
-$reportDirectory = Join-Path $PSScriptRoot 'results'
-$report = Join-Path $reportDirectory 'synthetic-benchmark.json'
-New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
-dotnet $tool benchmark --manifest (Join-Path $corpus 'manifest.json') --seed $Seed --scenario-budget $ScenarioBudget --confirmation-runs $ConfirmationRuns --format json --output $report
-Write-Output "Benchmark report: $report"
+
+try {
+    # Remove all generated inputs before building or copying so a failed or
+    # incremental build cannot leave a stale assembly in the comparison.
+    foreach ($directory in @($baselineOutput, $candidateOutput, $baselineBuild, $candidateBuild)) {
+        if (Test-Path -LiteralPath $directory) {
+            Remove-Item -LiteralPath $directory -Recurse -Force
+        }
+    }
+
+    dotnet build $baselineProject -c Release
+    $baselineBuildExitCode = $LASTEXITCODE
+    if ($baselineBuildExitCode -ne 0) {
+        throw "Baseline benchmark build failed with dotnet exit code $baselineBuildExitCode."
+    }
+
+    dotnet build $candidateProject -c Release
+    $candidateBuildExitCode = $LASTEXITCODE
+    if ($candidateBuildExitCode -ne 0) {
+        throw "Candidate benchmark build failed with dotnet exit code $candidateBuildExitCode."
+    }
+
+    $requiredAssemblies = @(
+        (Join-Path $baselineBuild 'BehaviorOracleCorpus.Baseline.dll'),
+        (Join-Path $candidateBuild 'BehaviorOracleCorpus.Candidate.dll'),
+        $tool
+    )
+    foreach ($assembly in $requiredAssemblies) {
+        if (-not (Test-Path -LiteralPath $assembly -PathType Leaf)) {
+            throw "Required benchmark assembly is missing after build: $assembly"
+        }
+    }
+
+    New-Item -ItemType Directory -Path $baselineOutput, $candidateOutput -Force | Out-Null
+    Copy-Item -Path (Join-Path $baselineBuild '*') -Destination $baselineOutput -Force
+    Copy-Item -Path (Join-Path $candidateBuild '*') -Destination $candidateOutput -Force
+
+    $reportDirectory = Join-Path $PSScriptRoot 'results'
+    $report = Join-Path $reportDirectory 'synthetic-benchmark.json'
+    New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+    dotnet $tool benchmark --manifest (Join-Path $corpus 'manifest.json') --seed $Seed --scenario-budget $ScenarioBudget --confirmation-runs $ConfirmationRuns --format json --output $report
+    $benchmarkExitCode = $LASTEXITCODE
+    switch ($benchmarkExitCode) {
+        0 {
+            Write-Output "Benchmark completed with no behavioral divergence. Report: $report"
+            exit 0
+        }
+        1 {
+            Write-Output "Benchmark completed with the expected planted divergence result. Report: $report"
+            exit 1
+        }
+        default {
+            throw "Benchmark execution failed with tool exit code $benchmarkExitCode."
+        }
+    }
+}
+catch {
+    [Console]::Error.WriteLine("Benchmark failed closed: $($_.Exception.Message)")
+    exit 2
+}
