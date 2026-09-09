@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj" />
     <ProjectReference Include="..\..\bench\corpus\baseline\Baseline.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\bench\corpus\candidate\Candidate.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -18,6 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bench\corpus\baseline\bin\$(Configuration)\net8.0\BehaviorOracleCorpus.Baseline.dll" Link="Fixtures\BehaviorOracleCorpus.Baseline.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\bench\corpus\candidate\bin\$(Configuration)\net8.0\BehaviorOracleCorpus.Candidate.dll" Link="Fixtures\BehaviorOracleCorpus.Candidate.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\MissingDependency.deps.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

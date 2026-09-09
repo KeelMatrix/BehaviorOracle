@@ -4,6 +4,7 @@ namespace KeelMatrix.BehaviorOracle;
 
 internal sealed class ComparisonEngine
 {
+    private const int MaxReportedDivergences = 50;
     private readonly ApiSurfaceDiscoverer discoverer;
     private readonly ScenarioGenerator generator;
     private readonly WorkerRunner baselineRunner;
@@ -56,8 +57,9 @@ internal sealed class ComparisonEngine
         var generated = 0;
         var stable = 0;
         var inconclusive = 0;
-        var executionFailures = 0;
+        var executionFailures = baseline.LoadErrors.Count + candidate.LoadErrors.Count;
         var divergences = new List<DivergenceRecord>();
+        var divergenceCount = 0;
         var comparisonMilliseconds = new List<double>();
         var minimizationMilliseconds = new List<double>();
         var exercisedApis = new HashSet<string>(StringComparer.Ordinal);
@@ -93,20 +95,24 @@ internal sealed class ComparisonEngine
                         break;
                     case ProbeResultKind.BehavioralDivergence:
                         stable++;
-                        var minimized = await WitnessMinimizer.MinimizeAsync(
-                            scenario,
-                            candidateScenario => IsStableDivergenceAsync(pair, candidateScenario, options, cancellationToken),
-                            options,
-                            cancellationToken).ConfigureAwait(false);
-                        minimizationMilliseconds.Add(minimized.Elapsed.TotalMilliseconds);
-                        divergences.Add(new DivergenceRecord(
-                            pair.Baseline.Signature,
-                            scenario,
-                            outcome.Baseline!,
-                            outcome.Candidate!,
-                            minimized.Scenario,
-                            minimized.Elapsed,
-                            minimized.Attempts));
+                        divergenceCount++;
+                        if (divergences.Count < MaxReportedDivergences)
+                        {
+                            var minimized = await WitnessMinimizer.MinimizeAsync(
+                                scenario,
+                                candidateScenario => IsStableDivergenceAsync(pair, candidateScenario, options, cancellationToken),
+                                options,
+                                cancellationToken).ConfigureAwait(false);
+                            minimizationMilliseconds.Add(minimized.Elapsed.TotalMilliseconds);
+                            divergences.Add(new DivergenceRecord(
+                                pair.Baseline.Signature,
+                                scenario,
+                                outcome.Baseline!,
+                                outcome.Candidate!,
+                                minimized.Scenario,
+                                minimized.Elapsed,
+                                minimized.Attempts));
+                        }
                         break;
                     case ProbeResultKind.NondeterministicInconclusive:
                         inconclusive++;
@@ -137,10 +143,19 @@ internal sealed class ComparisonEngine
         var rate = generated == 0
             ? unsupportedApiCount > 0 ? 1d : 0d
             : (double)unsupportedOrInconclusive / generated;
+        var resultState = GetResultState(
+            matchedSignatures.Length,
+            supportedPairs.Length,
+            generated,
+            divergenceCount,
+            inconclusive,
+            executionFailures,
+            cancellationToken.IsCancellationRequested);
         return new ProbeReport
         {
             Seed = options.Seed,
             ScenarioBudget = options.ScenarioBudget,
+            ResultState = resultState,
             ConfirmationRuns = options.ConfirmationRuns,
             MatchedCallableApis = matchedSignatures.Length,
             EligibleSupportedApiPairs = supportedPairs.Length,
@@ -155,7 +170,7 @@ internal sealed class ComparisonEngine
             RemovedApis = removed.Length,
             GeneratedScenarios = generated,
             StableScenarios = stable,
-            DivergenceCount = divergences.Count,
+            DivergenceCount = divergenceCount,
             InconclusiveCount = inconclusive,
             UnsupportedCount = unsupportedCount,
             ExecutionFailureCount = executionFailures,
@@ -170,6 +185,38 @@ internal sealed class ComparisonEngine
             ScenarioResults = scenarioResults,
             Diagnostics = diagnostics
         };
+    }
+
+    private static string GetResultState(
+        int matchedApiCount,
+        int supportedApiCount,
+        int generatedScenarioCount,
+        int divergenceCount,
+        int inconclusiveCount,
+        int executionFailureCount,
+        bool cancelled)
+    {
+        if (cancelled || executionFailureCount > 0)
+        {
+            return ProbeResultStates.ExecutionFailure;
+        }
+
+        if (divergenceCount > 0)
+        {
+            return ProbeResultStates.BehavioralDivergence;
+        }
+
+        if (inconclusiveCount > 0)
+        {
+            return ProbeResultStates.NondeterministicInconclusive;
+        }
+
+        if (matchedApiCount == 0 || supportedApiCount == 0 || generatedScenarioCount == 0)
+        {
+            return ProbeResultStates.UnsupportedApi;
+        }
+
+        return ProbeResultStates.EquivalentWithinTestedDomain;
     }
 
     private async Task<ScenarioOutcome> CompareScenarioAsync(

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace KeelMatrix.BehaviorOracle;
 
@@ -22,10 +23,49 @@ internal sealed record ProbeOptions(
 
     public static ProbeOptions FromFile(string path)
     {
-        var json = File.ReadAllText(path);
-        var value = JsonSerializer.Deserialize<ProbeOptions>(json, JsonOptions);
+        try
+        {
+            var json = File.ReadAllText(path);
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidDataException("Configuration must be a JSON object.");
+            }
 
-        return value ?? throw new InvalidDataException("Configuration is empty.");
+            var knownProperties = new HashSet<string>(
+                ["version", "seed", "scenarioBudget", "confirmationRuns"],
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!knownProperties.Contains(property.Name))
+                {
+                    throw new InvalidDataException($"Configuration property '{property.Name}' is not supported.");
+                }
+            }
+
+            var value = JsonSerializer.Deserialize<ConfigFile>(json, JsonOptions)
+                ?? throw new InvalidDataException("Configuration is empty.");
+            if (value.Version is null)
+            {
+                throw new InvalidDataException("Configuration must declare version 1.");
+            }
+
+            if (value.Version != 1)
+            {
+                throw new InvalidDataException($"Configuration version {value.Version} is not supported; expected version 1.");
+            }
+
+            var options = new ProbeOptions(
+                Seed: value.Seed ?? 12345,
+                ScenarioBudget: value.ScenarioBudget ?? 500,
+                ConfirmationRuns: value.ConfirmationRuns ?? 3);
+            options.Validate();
+            return options;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("Configuration JSON is invalid.", exception);
+        }
     }
 
     public void Validate()
@@ -64,4 +104,10 @@ internal sealed record ProbeOptions(
             throw new ArgumentOutOfRangeException(nameof(MinimizationMaxAttempts), "Minimization bounds are invalid.");
         }
     }
+
+    private sealed record ConfigFile(
+        [property: JsonPropertyName("version")] int? Version,
+        [property: JsonPropertyName("seed")] long? Seed,
+        [property: JsonPropertyName("scenarioBudget")] int? ScenarioBudget,
+        [property: JsonPropertyName("confirmationRuns")] int? ConfirmationRuns);
 }

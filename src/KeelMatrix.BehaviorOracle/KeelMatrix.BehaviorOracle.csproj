@@ -4,9 +4,40 @@
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>KeelMatrix.BehaviorOracle</AssemblyName>
     <RootNamespace>KeelMatrix.BehaviorOracle</RootNamespace>
-    <IsPackable>false</IsPackable>
+    <Version>0.1.0</Version>
+    <PackageVersion>0.1.0</PackageVersion>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>behavior-oracle</ToolCommandName>
+    <PackageId>KeelMatrix.BehaviorOracle</PackageId>
+    <Authors>KeelMatrix</Authors>
+    <Description>Compare two .NET library builds with deterministic scenarios and receive a minimized witness when stable behavior diverges.</Description>
+    <PackageTags>dotnet;compatibility;semantic-versioning;regression-testing;differential-testing;testing;nuget;ci;dotnet-tool</PackageTags>
+    <RepositoryUrl>https://github.com/KeelMatrix/BehaviorOracle</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/KeelMatrix/BehaviorOracle#readme</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <Deterministic>true</Deterministic>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KeelMatrix.Telemetry" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
 </Project>
 

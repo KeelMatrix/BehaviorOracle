@@ -1,4 +1,4 @@
-# BehaviorOracle Phase 0 benchmark report
+# BehaviorOracle synthetic benchmark report
 
 This report records the reproducible synthetic feasibility evidence for the bounded .NET semantic domain. It is an engineering benchmark, not a release-readiness claim.
 
@@ -12,7 +12,7 @@ This report records the reproducible synthetic feasibility evidence for the boun
 - Raw result: [`bench/results/synthetic-benchmark.json`](../bench/results/synthetic-benchmark.json)
 - Manifest: [`bench/corpus/manifest.json`](../bench/corpus/manifest.json)
 
-The comparison median is the median of the 80 generated scenario comparison timings in this one committed recipe run. Each timing includes three fresh baseline-worker confirmations and three fresh candidate-worker confirmations; witness minimization is measured separately. The minimization median is across the 32 detected divergence scenario records. These are local wall-clock measurements on the host above, not cross-machine performance claims. The report values below are copied from the raw artifact.
+The comparison median is the median of the 80 generated scenario comparison timings in this one committed recipe run. Each timing includes three fresh baseline-worker confirmations and three fresh candidate-worker confirmations; witness minimization is measured separately. The minimization median is across the 32 detected divergence scenario records. These are local wall-clock measurements on the host above, not cross-machine performance claims. Timing fields are retained for local benchmark inspection but omitted from the versioned JSON report so repeated reports with the same inputs remain byte-deterministic.
 
 The benchmark runner clears generated baseline/candidate build and copy directories before each run, checks both corpus build exit codes, verifies the required assemblies, and aborts with exit code `2` on build, configuration, or execution failure. A trustworthy planted-divergence result preserves the tool's exit code `1` and is reported separately from runner failure; an equivalent result uses exit code `0`.
 
@@ -57,8 +57,8 @@ Each confirmation uses a disposable worker process with bounded stdout/stderr, t
 
 ## Real-target evidence status
 
-The historical Redaction, MockHttp, Newtonsoft.Json, and QueryWatch rows from the earlier probe are explicitly downgraded to unverified spot checks. This ref does not commit the exact package/source hashes, source commit references, configuration, commands, or raw result artifacts needed to reproduce those rows. They are excluded from the synthetic go-gate evidence and must not be described as trustworthy real-library equivalence evidence. See [`bench/real-targets.md`](../bench/real-targets.md).
+The historical Redaction, MockHttp, Newtonsoft.Json, and QueryWatch rows from the earlier probe are explicitly downgraded to unverified spot checks. This ref does not commit the exact package/source hashes, source commit references, configuration, commands, or raw result artifacts needed to reproduce those rows. They are excluded from the committed synthetic evidence set and must not be described as trustworthy real-library equivalence evidence. See [`bench/real-targets.md`](../bench/real-targets.md).
 
-## Go-gate interpretation
+## Interpretation
 
 The synthetic precision, recall, witness, runtime, and conservative-classification criteria pass for this bounded corpus. The honest supported-domain percentage is 66.67%, so the report does not claim a nominal coverage threshold for breadth; narrowing the domain is the correct response to hidden-state risk. The real-library-value criterion is **UNVERIFIED**, not passed, because the historical real-target spot checks were deliberately excluded. Independent review and the durable-engineering decision remain required; this report does not establish package, CI, telemetry, cross-platform, or release readiness.

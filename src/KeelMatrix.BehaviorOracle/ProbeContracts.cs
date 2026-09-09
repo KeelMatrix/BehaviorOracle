@@ -12,6 +12,15 @@ internal enum ProbeResultKind
     ExecutionFailure
 }
 
+internal static class ProbeResultStates
+{
+    public const string EquivalentWithinTestedDomain = "EQUIVALENT_WITHIN_TESTED_DOMAIN";
+    public const string BehavioralDivergence = "BEHAVIORAL_DIVERGENCE";
+    public const string NondeterministicInconclusive = "NONDETERMINISTIC_INCONCLUSIVE";
+    public const string UnsupportedApi = "UNSUPPORTED_API";
+    public const string ExecutionFailure = "EXECUTION_FAILURE";
+}
+
 internal enum GeneratedValueKind
 {
     Null,
@@ -142,7 +151,7 @@ internal sealed record DivergenceRecord(
     Observation Baseline,
     Observation Candidate,
     GeneratedScenario MinimizedInput,
-    TimeSpan MinimizationTime,
+    [property: JsonIgnore] TimeSpan MinimizationTime,
     int MinimizationAttempts);
 
 internal sealed record BenchmarkMetrics(
@@ -163,6 +172,7 @@ internal sealed record ScenarioResult(
 internal sealed record ProbeReport
 {
     public int ReportVersion { get; init; } = 1;
+    public string ResultState { get; init; } = ProbeResultStates.ExecutionFailure;
     public long Seed { get; init; }
     public int ScenarioBudget { get; init; }
     public int ConfirmationRuns { get; init; }
@@ -182,7 +192,9 @@ internal sealed record ProbeReport
     public int UnsupportedCount { get; init; }
     public int ExecutionFailureCount { get; init; }
     public double UnsupportedOrInconclusiveRate { get; init; }
+    [JsonIgnore]
     public double MedianComparisonMilliseconds { get; init; }
+    [JsonIgnore]
     public double MedianMinimizationMilliseconds { get; init; }
     public int MinimizedWitnessSize { get; init; }
     public bool Trustworthy { get; init; }
@@ -192,6 +204,10 @@ internal sealed record ProbeReport
     public IReadOnlyList<ScenarioResult> ScenarioResults { get; init; } = [];
     public BenchmarkMetrics? Benchmark { get; init; }
     public IReadOnlyList<string> Diagnostics { get; init; } = [];
+
+    [JsonIgnore]
+    public bool HasSuccessfulSupportedScenario =>
+        GeneratedScenarios > 0 && ExecutionFailureCount == 0 && Trustworthy;
 }
 
 internal static class ObservationCodec

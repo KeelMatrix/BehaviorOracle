@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace KeelMatrix.BehaviorOracle;
 
@@ -30,7 +31,7 @@ internal static class Program
                 _ => throw new ArgumentException($"Unknown command '{args[0]}'.")
             };
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidDataException or DirectoryNotFoundException or IOException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException or DirectoryNotFoundException or IOException or UnauthorizedAccessException)
         {
             Console.Error.WriteLine($"Configuration error: {exception.Message}");
             return 2;
@@ -42,9 +43,15 @@ internal static class Program
         var values = ArgumentMap.Parse(args);
         var baseline = values.Required("baseline");
         var candidate = values.Required("candidate");
+        _ = values.Required("config");
         var options = values.ToOptions();
         var report = await new ComparisonEngine().CompareAsync(baseline, candidate, options).ConfigureAwait(false);
         WriteReport(report, values.Get("format") ?? "console");
+        if (report.HasSuccessfulSupportedScenario)
+        {
+            TelemetryHost.TrackSuccessfulComparison();
+        }
+
         return report.Trustworthy
             ? report.DivergenceCount == 0 ? 0 : 1
             : 2;
@@ -78,9 +85,14 @@ internal static class Program
             throw new ArgumentException("Format must be console or json.");
         }
 
-        Console.WriteLine(report.DivergenceCount == 0
-            ? "EQUIVALENT WITHIN TESTED DOMAIN"
-            : "BEHAVIORAL DIVERGENCE");
+        Console.WriteLine(report.ResultState switch
+        {
+            ProbeResultStates.EquivalentWithinTestedDomain => "EQUIVALENT WITHIN TESTED DOMAIN",
+            ProbeResultStates.BehavioralDivergence => "BEHAVIORAL DIVERGENCE",
+            ProbeResultStates.NondeterministicInconclusive => "NONDETERMINISTIC_INCONCLUSIVE",
+            ProbeResultStates.UnsupportedApi => "UNSUPPORTED_API",
+            _ => "EXECUTION_FAILURE"
+        });
         Console.WriteLine($"Matched callable APIs: {report.MatchedCallableApis}");
         Console.WriteLine($"Eligible supported API pairs: {report.EligibleSupportedApiPairs}");
         Console.WriteLine($"APIs actually exercised: {report.ExercisedApiCount}");
@@ -95,23 +107,72 @@ internal static class Program
         foreach (var divergence in report.Divergences.Take(10))
         {
             Console.WriteLine();
-            Console.WriteLine($"API: {divergence.ApiSignature}");
-            Console.WriteLine($"Minimized witness size: {divergence.MinimizedInput.Size}");
+            Console.WriteLine("API:");
+            Console.WriteLine($"  {divergence.ApiSignature}");
+            Console.WriteLine("Input witness:");
+            Console.WriteLine(FormatWitness(divergence.Input));
+            Console.WriteLine("Baseline:");
+            Console.WriteLine($"  {ObservationCodec.Serialize(divergence.Baseline)}");
+            Console.WriteLine("Candidate:");
+            Console.WriteLine($"  {ObservationCodec.Serialize(divergence.Candidate)}");
+            Console.WriteLine("Minimized witness:");
+            Console.WriteLine(FormatWitness(divergence.MinimizedInput));
             Console.WriteLine($"Reproduce with seed: {divergence.MinimizedInput.Seed}");
+            Console.WriteLine("This is evidence of a behavioral difference, not an automatic breaking-change judgment.");
         }
+
+        if (report.DivergenceCount > report.Divergences.Count)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Additional divergences omitted from the bounded report: {report.DivergenceCount - report.Divergences.Count}");
+        }
+    }
+
+    private static string FormatWitness(GeneratedScenario scenario)
+    {
+        if (scenario.Arguments.Count == 0)
+        {
+            return "  (no arguments)";
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            scenario.Arguments.Select((argument, index) => $"  arg{index} = {FormatValue(argument, 0)}"));
+    }
+
+    private static string FormatValue(GeneratedValue value, int depth)
+    {
+        if (depth > 6)
+        {
+            return "<depth limit>";
+        }
+
+        return value.Kind switch
+        {
+            GeneratedValueKind.Null => "null",
+            GeneratedValueKind.Boolean => value.BooleanValue ? "true" : "false",
+            GeneratedValueKind.Integer => value.IntegerValue.ToString(CultureInfo.InvariantCulture),
+            GeneratedValueKind.FloatingPoint => value.FloatingPointValue.ToString("R", CultureInfo.InvariantCulture),
+            GeneratedValueKind.Decimal => value.TextValue ?? "0",
+            GeneratedValueKind.String => JsonSerializer.Serialize(value.TextValue ?? string.Empty),
+            GeneratedValueKind.Enum => value.TextValue ?? "<enum>",
+            GeneratedValueKind.Collection => "[" + string.Join(", ", (value.Items ?? []).Take(16).Select(item => FormatValue(item, depth + 1))) + "]",
+            GeneratedValueKind.Object => "{" + string.Join(", ", (value.Members ?? new Dictionary<string, GeneratedValue>()).OrderBy(pair => pair.Key, StringComparer.Ordinal).Take(16).Select(pair => $"{pair.Key}: {FormatValue(pair.Value, depth + 1)}")) + "}",
+            _ => "<unknown>"
+        };
     }
 
     private static void PrintHelp()
     {
         Console.WriteLine(
             """
-            BehaviorOracle Phase 0 feasibility probe
+            BehaviorOracle
 
             behavior-oracle compare --baseline <dir> --candidate <dir> [options]
             behavior-oracle benchmark --manifest <file> [options]
 
             Options:
-              --config <file>              Read version-1 JSON options.
+              --config <file>              Read version-1 JSON options (required for compare).
               --seed <number>              Deterministic scenario seed.
               --scenario-budget <number>   Total generated scenarios.
               --confirmation-runs <number> Stable confirmation runs (default 3).
@@ -128,6 +189,11 @@ internal static class Program
 internal sealed class ArgumentMap
 {
     private readonly Dictionary<string, string> values;
+    private static readonly HashSet<string> KnownKeys =
+    [
+        "baseline", "candidate", "config", "seed", "scenario-budget", "confirmation-runs",
+        "timeout", "format", "manifest", "output"
+    ];
 
     private ArgumentMap(Dictionary<string, string> values)
     {
@@ -152,12 +218,20 @@ internal sealed class ArgumentMap
                 continue;
             }
 
+            if (!KnownKeys.Contains(key))
+            {
+                throw new ArgumentException($"Unknown option '--{key}'.");
+            }
+
             if (++index >= arguments.Length || arguments[index].StartsWith("--", StringComparison.Ordinal))
             {
                 throw new ArgumentException($"Option '--{key}' requires a value.");
             }
 
-            values[key] = arguments[index];
+            if (!values.TryAdd(key, arguments[index]))
+            {
+                throw new ArgumentException($"Option '--{key}' was specified more than once.");
+            }
         }
 
         return new ArgumentMap(values);
@@ -182,13 +256,27 @@ internal sealed class ArgumentMap
         };
     }
 
-    private int Integer(string key, int fallback) =>
-        Get(key) is string value
-            ? int.Parse(value, CultureInfo.InvariantCulture)
-            : fallback;
+    private int Integer(string key, int fallback)
+    {
+        if (Get(key) is not string value)
+        {
+            return fallback;
+        }
 
-    private long Long(string key, long fallback) =>
-        Get(key) is string value
-            ? long.Parse(value, CultureInfo.InvariantCulture)
-            : fallback;
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : throw new ArgumentException($"Option '--{key}' must be an integer.");
+    }
+
+    private long Long(string key, long fallback)
+    {
+        if (Get(key) is not string value)
+        {
+            return fallback;
+        }
+
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : throw new ArgumentException($"Option '--{key}' must be an integer.");
+    }
 }

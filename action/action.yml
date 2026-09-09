@@ -1,0 +1,36 @@
+name: BehaviorOracle comparison
+description: Build two Git revisions and compare their supported deterministic behavior.
+inputs:
+  baseline-ref:
+    description: Git revision to use as the baseline.
+    required: true
+  candidate-ref:
+    description: Git revision to use as the candidate.
+    required: true
+  project:
+    description: Repository-relative project file to build.
+    required: true
+  config:
+    description: Repository-relative BehaviorOracle version-1 configuration file.
+    required: true
+  tool-version:
+    description: BehaviorOracle tool package version to install.
+    required: false
+    default: 0.1.0
+  package-source:
+    description: Optional package source used for the tool and its dependencies.
+    required: false
+    default: https://api.nuget.org/v3/index.json
+runs:
+  using: composite
+  steps:
+    - name: Compare baseline and candidate behavior
+      shell: pwsh
+      env:
+        BEHAVIOR_ORACLE_BASELINE_REF: ${{ inputs.baseline-ref }}
+        BEHAVIOR_ORACLE_CANDIDATE_REF: ${{ inputs.candidate-ref }}
+        BEHAVIOR_ORACLE_PROJECT: ${{ inputs.project }}
+        BEHAVIOR_ORACLE_CONFIG: ${{ inputs.config }}
+        BEHAVIOR_ORACLE_TOOL_VERSION: ${{ inputs.tool-version }}
+        BEHAVIOR_ORACLE_PACKAGE_SOURCE: ${{ inputs.package-source }}
+      run: ${{ github.action_path }}/entrypoint.ps1
