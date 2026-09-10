@@ -33,6 +33,19 @@ function Invoke-Checked {
     }
 }
 
+function Remove-TemporaryDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+
+    Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+    if (Test-Path -LiteralPath $Path) {
+        throw "Temporary package contract directory was not removed: $Path"
+    }
+}
+
 function Get-CanonicalArchiveHash {
     param([Parameter(Mandatory = $true)][string]$ArchivePath)
 
@@ -163,7 +176,5 @@ catch {
     exit 1
 }
 finally {
-    if (Test-Path -LiteralPath $verificationRoot) {
-        Remove-Item -LiteralPath $verificationRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    Remove-TemporaryDirectory -Path $verificationRoot
 }

@@ -11,6 +11,19 @@ function Assert-Test {
     }
 }
 
+function Remove-TemporaryDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+
+    Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+    if (Test-Path -LiteralPath $Path) {
+        throw "Temporary dependency audit directory was not removed: $Path"
+    }
+}
+
 $scriptPath = Join-Path $PSScriptRoot 'Invoke-DependencyAudit.ps1'
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) "behaviororacle-dependency-audit-$([Guid]::NewGuid().ToString('N'))"
 $replayPath = Join-Path $testRoot 'unavailable-audit.txt'
@@ -18,6 +31,9 @@ $replayPath = Join-Path $testRoot 'unavailable-audit.txt'
 try {
     New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
     @'
+No vulnerable packages found given the current sources.
+The following sources were used:
+  https://api.nuget.org/v3/index.json
 error NU1900: Error occurred while retrieving package vulnerability data: unable to load the service index for source https://api.nuget.org/v3/index.json.
 '@ | Set-Content -LiteralPath $replayPath -NoNewline
 
@@ -41,7 +57,5 @@ catch {
     exit 1
 }
 finally {
-    if (Test-Path -LiteralPath $testRoot) {
-        Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    Remove-TemporaryDirectory -Path $testRoot
 }

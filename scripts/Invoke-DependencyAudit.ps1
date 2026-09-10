@@ -75,15 +75,6 @@ try {
     }
 
     $unavailablePattern = Get-UnavailableMatch -Output $auditOutput
-    $clean = $auditExitCode -eq 0 -and
-        $auditOutput -match '(?im)(No vulnerable packages found|no vulnerable packages given the current sources)' -and
-        $auditOutput -match '(?im)following sources were used'
-
-    if ($clean) {
-        Write-AuditSummary 'Dependency audit: clean (direct and transitive dependency graph checked).'
-        exit 0
-    }
-
     if ($null -ne $unavailablePattern) {
         if ($Mode -eq 'Required') {
             Write-AuditSummary "Dependency audit: unavailable; required audit failed closed (matching condition: $unavailablePattern)."
@@ -91,6 +82,15 @@ try {
         }
 
         Write-AuditSummary "Dependency audit: unavailable; ordinary CI tolerated the transient advisory-service condition and did not treat it as clean (matching condition: $unavailablePattern)."
+        exit 0
+    }
+
+    $clean = $auditExitCode -eq 0 -and
+        $auditOutput -match '(?im)(No vulnerable packages found|no vulnerable packages given the current sources)' -and
+        $auditOutput -match '(?im)following sources were used'
+
+    if ($clean) {
+        Write-AuditSummary 'Dependency audit: clean (direct and transitive dependency graph checked).'
         exit 0
     }
 

@@ -81,6 +81,8 @@ jobs:
           --warnaserror
           -p:Version=${{ needs.resolve-version.outputs.version }}
           -p:PackageVersion=${{ needs.resolve-version.outputs.version }}
+          -p:SourceRevisionId=${{ github.sha }}
+          -p:RepositoryCommit=${{ github.sha }}
 
       - name: Run full test suite
         shell: pwsh
@@ -152,21 +154,9 @@ jobs:
             throw "Unexpected synthetic benchmark metrics: $($metrics | ConvertTo-Json -Compress)."
           }
 
-      - name: Audit vulnerable dependencies
+      - name: Audit vulnerable dependencies (required, fail closed)
         shell: pwsh
-        run: |
-          $audit = (& dotnet list KeelMatrix.BehaviorOracle.sln package --vulnerable --include-transitive 2>&1 | Out-String)
-          $status = $LASTEXITCODE
-          $audit | Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-
-          if ($status -ne 0) {
-            throw "The dependency vulnerability audit failed closed with exit code $status. $audit"
-          }
-
-          if ($audit -match '(?im)has the following vulnerable package' -or
-              $audit -match '(?im)NU190[0-4]\b') {
-            throw 'The dependency graph contains a vulnerability or the vulnerability data was unavailable.'
-          }
+        run: pwsh -NoProfile -File scripts/Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln
 
   package:
     name: Package / inspect and consume
@@ -215,97 +205,26 @@ jobs:
           -p:SymbolPackageFormat=snupkg
           -p:Version=${{ needs.resolve-version.outputs.version }}
           -p:PackageVersion=${{ needs.resolve-version.outputs.version }}
+          -p:SourceRevisionId=${{ github.sha }}
+          -p:RepositoryCommit=${{ github.sha }}
           --output ./artifacts/packages
 
       - name: Inspect package contents and exact artifact set
         shell: pwsh
-        run: |
-          $packageDirectory = [IO.Path]::Combine($PWD.Path, 'artifacts', 'packages')
-          $version = $env:RELEASE_VERSION
-          $expected = @(
-            "KeelMatrix.BehaviorOracle.$version.nupkg",
-            "KeelMatrix.BehaviorOracle.$version.snupkg"
-          ) | Sort-Object
-          $actual = @(Get-ChildItem -LiteralPath $packageDirectory -File | Select-Object -ExpandProperty Name | Sort-Object)
-          if (@(Compare-Object -ReferenceObject $expected -DifferenceObject $actual).Count -ne 0) {
-            throw "Unexpected package set. Expected: $($expected -join ', '). Actual: $($actual -join ', ')."
-          }
-
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $forbiddenPathPattern = '(?i)(^|/)(\.env(?:\.local)?|keelmatrix\.telemetry\.json|tests?|fixtures|artifacts|obj|bin|\.vs|\.vscode)(/|$)'
-          $forbiddenTextPattern = '(?i)(password|api[_-]?key|secret\s*=|BEGIN (?:RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]+)'
-          $textExtensions = @('.nuspec', '.md', '.txt', '.json', '.xml', '.props', '.targets', '.cs', '.csproj')
-
-          foreach ($package in Get-ChildItem -LiteralPath $packageDirectory -File) {
-            $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
-            try {
-              $entryNames = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
-              foreach ($entryName in $entryNames) {
-                if ($entryName -match $forbiddenPathPattern) {
-                  throw "Forbidden package path '$entryName' found in $($package.Name)."
-                }
-
-                $extension = [IO.Path]::GetExtension($entryName)
-                if ($textExtensions -contains $extension.ToLowerInvariant()) {
-                  $entry = $archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq $entryName } | Select-Object -First 1
-                  if ($entry.Length -gt 0) {
-                    $reader = [IO.StreamReader]::new($entry.Open())
-                    try {
-                      $content = $reader.ReadToEnd()
-                    }
-                    finally {
-                      $reader.Dispose()
-                    }
-
-                    if ($content -match $forbiddenTextPattern) {
-                      throw "Forbidden secret or disallowed text found in $($package.Name): $entryName."
-                    }
-                  }
-                }
-              }
-
-              if ($package.Extension -eq '.nupkg') {
-                $nuspecEntry = $archive.Entries | Where-Object { $_.FullName -like '*.nuspec' } | Select-Object -First 1
-                if ($null -eq $nuspecEntry) {
-                  throw "The package has no nuspec: $($package.Name)."
-                }
-
-                $reader = [IO.StreamReader]::new($nuspecEntry.Open())
-                try {
-                  [xml]$nuspec = $reader.ReadToEnd()
-                }
-                finally {
-                  $reader.Dispose()
-                }
-
-                if ($nuspec.package.metadata.id -ne 'KeelMatrix.BehaviorOracle' -or
-                    $nuspec.package.metadata.version -ne $version) {
-                  throw "Package identity/version mismatch in $($package.Name)."
-                }
-
-                if (-not ($entryNames -contains 'README.md') -or
-                    -not ($entryNames -contains 'LICENSE') -or
-                    -not ($entryNames -contains 'icon.png') -or
-                    -not ($entryNames | Where-Object { $_ -match '(^|/)KeelMatrix\.BehaviorOracle\.dll$' })) {
-                  throw "Required package content is missing from $($package.Name)."
-                }
-              }
-              else {
-                if (-not ($entryNames | Where-Object { $_ -match '\.pdb$' })) {
-                  throw "The symbol package contains no PDB: $($package.Name)."
-                }
-              }
-            }
-            finally {
-              $archive.Dispose()
-            }
-          }
+        run: >
+          pwsh -NoProfile -File scripts/Verify-PackageContract.ps1
+          -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.${{ needs.resolve-version.outputs.version }}.nupkg
+          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.${{ needs.resolve-version.outputs.version }}.snupkg
+          -ExpectedVersion $env:RELEASE_VERSION
+          -ExpectedRepositoryCommit $env:GITHUB_SHA
 
       - name: Validate isolated package consumer
         shell: pwsh
         run: >
           pwsh -NoProfile -File scripts/Invoke-PackageSmoke.ps1
           -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.${{ needs.resolve-version.outputs.version }}.nupkg
+          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.${{ needs.resolve-version.outputs.version }}.snupkg
+          -ExpectedRepositoryCommit $env:GITHUB_SHA
           -Seed 12345
           -ScenarioBudget 20
           -ConfirmationRuns 2

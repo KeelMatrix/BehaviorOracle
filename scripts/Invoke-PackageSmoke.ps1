@@ -30,6 +30,19 @@ function Assert-True {
     }
 }
 
+function Remove-TemporaryDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+
+    Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+    if (Test-Path -LiteralPath $Path) {
+        throw "Temporary package smoke directory was not removed: $Path"
+    }
+}
+
 function Get-RepositoryCommit {
     param([string]$Commit)
     if (-not [string]::IsNullOrWhiteSpace($Commit)) {
@@ -138,6 +151,7 @@ $config = Join-Path $smokeRoot 'oracle.json'
 $nugetConfig = Join-Path $smokeRoot 'NuGet.config'
 $nugetPackages = Join-Path $smokeRoot 'nuget-packages'
 $httpCache = Join-Path $smokeRoot 'nuget-http-cache'
+$scratch = Join-Path $smokeRoot 'nuget-scratch'
 $pluginsCache = Join-Path $smokeRoot 'nuget-plugins-cache'
 $dotnetHome = Join-Path $smokeRoot 'dotnet-home'
 $toolPath = $null
@@ -148,16 +162,20 @@ $oldTelemetryOptOut = [Environment]::GetEnvironmentVariable('KEELMATRIX_NO_TELEM
 $savedEnvironment = @{}
 
 try {
-    New-Item -ItemType Directory -Path $packageFeed, $installRoot, $baselineOutput, $candidateOutput, $reportRoot, $nugetPackages, $httpCache, $pluginsCache, $dotnetHome -Force | Out-Null
+    New-Item -ItemType Directory -Path $packageFeed, $installRoot, $baselineOutput, $candidateOutput, $reportRoot, $nugetPackages, $httpCache, $scratch, $pluginsCache, $dotnetHome -Force | Out-Null
     $expectedCommit = Get-RepositoryCommit -Commit $ExpectedRepositoryCommit
 
-    foreach ($name in @('NUGET_PACKAGES', 'NUGET_HTTP_CACHE_PATH', 'NUGET_PLUGINS_CACHE_PATH', 'DOTNET_CLI_HOME')) {
+    foreach ($name in @('NUGET_PACKAGES', 'NUGET_HTTP_CACHE_PATH', 'NUGET_SCRATCH', 'NUGET_PLUGINS_CACHE_PATH', 'DOTNET_CLI_HOME', 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE', 'DOTNET_CLI_TELEMETRY_OPTOUT', 'DOTNET_NOLOGO')) {
         $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
     }
     [Environment]::SetEnvironmentVariable('NUGET_PACKAGES', $nugetPackages, 'Process')
     [Environment]::SetEnvironmentVariable('NUGET_HTTP_CACHE_PATH', $httpCache, 'Process')
+    [Environment]::SetEnvironmentVariable('NUGET_SCRATCH', $scratch, 'Process')
     [Environment]::SetEnvironmentVariable('NUGET_PLUGINS_CACHE_PATH', $pluginsCache, 'Process')
     [Environment]::SetEnvironmentVariable('DOTNET_CLI_HOME', $dotnetHome, 'Process')
+    [Environment]::SetEnvironmentVariable('DOTNET_SKIP_FIRST_TIME_EXPERIENCE', '1', 'Process')
+    [Environment]::SetEnvironmentVariable('DOTNET_CLI_TELEMETRY_OPTOUT', '1', 'Process')
+    [Environment]::SetEnvironmentVariable('DOTNET_NOLOGO', '1', 'Process')
     [Environment]::SetEnvironmentVariable('KEELMATRIX_NO_TELEMETRY', '1', 'Process')
 
     Invoke-Checked 'dotnet' @('restore', $solution, '--configfile', (Join-Path $repo 'NuGet.config'), '-p:NuGetAudit=false')
@@ -271,7 +289,5 @@ finally {
     foreach ($name in $savedEnvironment.Keys) {
         [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process')
     }
-    if (Test-Path -LiteralPath $smokeRoot) {
-        Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    Remove-TemporaryDirectory -Path $smokeRoot
 }

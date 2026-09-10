@@ -22,6 +22,19 @@ function Assert-Test {
     }
 }
 
+function Remove-TemporaryDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+
+    Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+    if (Test-Path -LiteralPath $Path) {
+        throw "Temporary package inspection directory was not removed: $Path"
+    }
+}
+
 $repo = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($InspectorPath)) {
     $InspectorPath = Join-Path $PSScriptRoot 'Inspect-Package.ps1'
@@ -79,7 +92,5 @@ catch {
     exit 1
 }
 finally {
-    if (Test-Path -LiteralPath $testRoot) {
-        Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    Remove-TemporaryDirectory -Path $testRoot
 }

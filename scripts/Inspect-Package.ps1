@@ -218,7 +218,7 @@ function Assert-PngContract {
         [Parameter(Mandatory = $true)][string]$ExpectedIconFile
     )
 
-    Assert-Contract ($Bytes.Length -le 204800) "$Description must be no larger than 200 KiB."
+    Assert-Contract ($Bytes.Length -le 200000) "$Description must be no larger than 200 KB."
     Assert-Contract ($Bytes.Length -ge 24) "$Description is not a complete PNG."
     $signature = @(137, 80, 78, 71, 13, 10, 26, 10)
     for ($index = 0; $index -lt $signature.Count; $index++) {
