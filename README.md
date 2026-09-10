@@ -152,7 +152,11 @@ The wrapper requires the tool version to be available from the configured packag
 
 ## Platform evidence and limitations
 
-The current product evidence is from Windows with .NET 8.0. The implementation avoids shell-specific comparison contracts and uses .NET process/path APIs, but this repository does not claim Linux or macOS validation until those environments have been exercised.
+The repository's CI validates the tool and worker/process scenarios with .NET 8.0 on `windows-latest`, `ubuntu-latest`, and `macos-latest` in its `platform` job. That matrix runs restore, a Release build with warnings as errors, format verification, the full test suite, the deterministic synthetic benchmark, a transitive dependency vulnerability check, and telemetry-suppression checks.
+
+After the platform matrix passes, the dependent `package` job runs on `ubuntu-latest`. It packs the `KeelMatrix.BehaviorOracle` 0.1.0 package and symbols, inspects the exact archive contents, installs the packed tool from an isolated feed, exercises equivalent and planted-divergence comparisons, and verifies telemetry remains suppressed. See the [CI workflow](.github/workflows/ci.yml).
+
+This evidence covers the tested .NET 8.0 tool and worker/process scenarios on those GitHub-hosted runner images. It does not guarantee that every compared assembly runs on every operating system; behavior remains subject to the compared library and host environment.
 
 BehaviorOracle does not build source revisions as part of its core engine, guarantee arbitrary equivalence, infer author intent, compare performance, test concurrency semantics, or provide a hosted execution sandbox. Build baseline and candidate artifacts separately and inspect every reported difference in the context of your library's contract.
 
