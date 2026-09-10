@@ -16,6 +16,21 @@ env:
   KEELMATRIX_NO_TELEMETRY: "1"
 
 jobs:
+  commit-message-policy:
+    name: Commit message policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Verify-CommitMessages.ps1
+
   platform:
     name: Platform / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
