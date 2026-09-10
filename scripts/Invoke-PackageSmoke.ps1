@@ -166,7 +166,11 @@ try {
 
     if ([string]::IsNullOrWhiteSpace($PackagePath)) {
         Invoke-Checked 'dotnet' @('build', $project, '-c', 'Release', '--no-restore')
-        Invoke-Checked 'dotnet' @('pack', $project, '-c', 'Release', '--no-build', '--no-restore', '--include-symbols', '-p:SymbolPackageFormat=snupkg', '-p:PackageVersion=0.1.0', '-o', $packageFeed)
+        $packArguments = @('pack', $project, '-c', 'Release', '--no-build', '--no-restore', '--include-symbols', '-p:SymbolPackageFormat=snupkg', '-p:PackageVersion=0.1.0')
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
+            $packArguments += @("-p:SourceRevisionId=$expectedCommit", "-p:RepositoryCommit=$expectedCommit")
+        }
+        Invoke-Checked 'dotnet' ($packArguments + @('-o', $packageFeed))
         $PackagePath = Join-Path $packageFeed $nupkgName
         $SymbolsPath = Join-Path $packageFeed $snupkgName
     }

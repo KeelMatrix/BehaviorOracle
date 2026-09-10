@@ -280,6 +280,8 @@ jobs:
           --no-restore
           --include-symbols
           --p:SymbolPackageFormat=snupkg
+          --p:SourceRevisionId=${{ github.sha }}
+          --p:RepositoryCommit=${{ github.sha }}
           --output ./artifacts/packages
 
       - name: Inspect exact package and symbol contracts

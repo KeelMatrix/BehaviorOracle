@@ -95,6 +95,12 @@ try {
         '-p:SymbolPackageFormat=snupkg',
         "-p:PackageVersion=$ExpectedVersion"
     )
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
+        $packArguments += @(
+            "-p:SourceRevisionId=$ExpectedRepositoryCommit",
+            "-p:RepositoryCommit=$ExpectedRepositoryCommit"
+        )
+    }
     Invoke-Checked 'dotnet' ($packArguments + @('--output', $firstPack))
     Invoke-Checked 'dotnet' ($packArguments + @('--output', $secondPack))
 
