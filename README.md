@@ -21,6 +21,12 @@ The repository's package contract is checked against the actual `.nupkg` and `.s
 
 The package-consumer smoke uses a fresh `NUGET_PACKAGES` cache and a generated source-mapped NuGet configuration. `KeelMatrix.BehaviorOracle` resolves only from the local candidate feed; its runtime dependency resolves from NuGet.org. It verifies the installed candidate package hash before exercising equivalent and planted-divergence comparisons.
 
+## Package validation for maintainers
+
+The repository's package contract is checked against the actual `.nupkg` and `.snupkg` archives. `scripts/Verify-PackageContract.ps1` uses an explicit allowlist for runtime, symbol, source, and NuGet-generated metadata entries; validates package metadata, the 512x512 icon and SourceLink; rejects unexpected archive entries; and repeats packing to compare canonical archive hashes. The only canonicalization is for the random identifiers NuGet generates in the allowlisted core-properties relationship metadata.
+
+The package-consumer smoke uses a fresh `NUGET_PACKAGES` cache and a generated source-mapped NuGet configuration. `KeelMatrix.BehaviorOracle` can resolve only from the local candidate feed; its runtime dependency resolves from NuGet.org. It verifies the installed candidate package hash before exercising equivalent and planted-divergence comparisons.
+
 ## Five-minute comparison
 
 Build the baseline and candidate library artifacts into separate directories. The directories must contain the assemblies and dependencies needed to execute the compared APIs.
