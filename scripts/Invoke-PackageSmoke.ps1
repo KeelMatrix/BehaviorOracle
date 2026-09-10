@@ -165,7 +165,7 @@ try {
     Invoke-Checked 'dotnet' @('build', $candidateProject, '-c', 'Release', '--no-restore')
 
     if ([string]::IsNullOrWhiteSpace($PackagePath)) {
-        Invoke-Checked 'dotnet' @('build', $project, '-c', 'Release', '--no-restore')
+        Invoke-Checked 'dotnet' @('build', $project, '-c', 'Release', '--no-restore', "-p:SourceRevisionId=$expectedCommit", "-p:RepositoryCommit=$expectedCommit")
         $packArguments = @('pack', $project, '-c', 'Release', '--no-build', '--no-restore', '--include-symbols', '-p:SymbolPackageFormat=snupkg', '-p:PackageVersion=0.1.0')
         if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
             $packArguments += @("-p:SourceRevisionId=$expectedCommit", "-p:RepositoryCommit=$expectedCommit")

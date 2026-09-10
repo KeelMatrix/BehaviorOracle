@@ -75,7 +75,13 @@ jobs:
         run: dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config -p:NuGetAudit=false
 
       - name: Build Release with warnings as errors
-        run: dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror
+        run: >
+          dotnet build KeelMatrix.BehaviorOracle.sln
+          --configuration Release
+          --no-restore
+          --warnaserror
+          --p:SourceRevisionId=${{ github.sha }}
+          --p:RepositoryCommit=${{ github.sha }}
 
       - name: Verify formatting with restore
         run: dotnet format KeelMatrix.BehaviorOracle.sln --verify-no-changes
