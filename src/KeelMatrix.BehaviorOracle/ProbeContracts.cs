@@ -154,7 +154,7 @@ internal sealed record DivergenceRecord(
     Observation Candidate,
     GeneratedScenario MinimizedInput,
     [property: JsonIgnore] TimeSpan MinimizationTime,
-    int MinimizationAttempts);
+    [property: JsonIgnore] int MinimizationAttempts);
 
 internal sealed record BenchmarkMetrics(
     int PlantedDivergences,

@@ -17,6 +17,7 @@ dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore 
 dotnet test KeelMatrix.BehaviorOracle.sln --configuration Release --no-build --no-restore
 dotnet format KeelMatrix.BehaviorOracle.sln --verify-no-changes
 pwsh -NoProfile -File .\bench\Run-Benchmark.ps1 -Seed 12345 -ScenarioBudget 80 -ConfirmationRuns 3
+pwsh -NoProfile -File .\action\Test-Action.ps1
 dotnet pack src/KeelMatrix.BehaviorOracle/KeelMatrix.BehaviorOracle.csproj --configuration Release --no-build --no-restore --include-symbols --p:SymbolPackageFormat=snupkg --output .\artifacts\packages
 pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
 dotnet list KeelMatrix.BehaviorOracle.sln package --vulnerable --include-transitive
@@ -24,7 +25,7 @@ dotnet run --project src/KeelMatrix.BehaviorOracle -- --help
 dotnet run --project src/KeelMatrix.BehaviorOracle -- compare --baseline <dir> --candidate <dir> --config <file>
 ```
 
-The benchmark intentionally reports the planted divergence with exit code `1`; the package smoke expects an equivalent comparison to exit `0` and a planted divergence to exit `1`. CI additionally requires the full passing test suite with worker/process coverage, exact package and symbol archives, archive contents, and telemetry suppression. Its `platform` job runs on `windows-latest`, `ubuntu-latest`, and `macos-latest`; the dependent `package` job runs on `ubuntu-latest`.
+The benchmark intentionally reports the planted divergence with exit code `1`; it is a development-only command gated from the shipped CLI and is enabled by `bench/Run-Benchmark.ps1`. The package smoke expects an equivalent comparison to exit `0` and a planted divergence to exit `1`. `action/Test-Action.ps1` validates the shipped Action wrapper on Windows PowerShell/.NET 8, including path handling, failure propagation, and cleanup. CI additionally requires the full passing test suite with worker/process coverage, exact package and symbol archives, archive contents, and telemetry suppression. Its `platform` job runs on `windows-latest`, `ubuntu-latest`, and `macos-latest`; the dependent `package` job runs on `ubuntu-latest`.
 
 ## Invariants
 

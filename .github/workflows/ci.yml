@@ -97,12 +97,12 @@ jobs:
 
           [xml]$trx = Get-Content -LiteralPath $trxPath.FullName -Raw
           $counters = $trx.TestRun.ResultSummary.Counters
-          if ([int]$counters.total -ne 41 -or
-              [int]$counters.passed -ne 41 -or
+          if ([int]$counters.total -ne 42 -or
+              [int]$counters.passed -ne 42 -or
               [int]$counters.failed -ne 0 -or
               [int]$counters.errors -ne 0 -or
               [int]$counters.notExecuted -ne 0) {
-            throw "Expected 41 passing tests, got total=$($counters.total), passed=$($counters.passed), failed=$($counters.failed), errors=$($counters.errors), notExecuted=$($counters.notExecuted)."
+            throw "Expected 42 passing tests, got total=$($counters.total), passed=$($counters.passed), failed=$($counters.failed), errors=$($counters.errors), notExecuted=$($counters.notExecuted)."
           }
 
           $testNames = @($trx.TestRun.Results.UnitTestResult | ForEach-Object { $_.testName })
@@ -150,25 +150,14 @@ jobs:
 
           exit 0
 
+      - name: Validate committed GitHub Action wrapper
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: pwsh -NoProfile -File action/Test-Action.ps1
+
       - name: Check vulnerable dependencies
         shell: pwsh
-        run: |
-          $audit = (& dotnet list KeelMatrix.BehaviorOracle.sln package --vulnerable --include-transitive 2>&1 | Out-String)
-          $status = $LASTEXITCODE
-          $audit | Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-
-          if ($audit -match '(?im)has the following vulnerable package') {
-            throw 'The dependency graph contains vulnerable packages.'
-          }
-
-          if ($status -ne 0) {
-            if ($audit -match '(?im)(NU1900|unable to load the service index|failed to retrieve|network)') {
-              "Dependency vulnerability data was unavailable on $env:RUNNER_OS; the audit was recorded but not treated as a package vulnerability result." | Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-            }
-            else {
-              throw "The dependency vulnerability command failed with exit code $status. $audit"
-            }
-          }
+        run: pwsh -NoProfile -File scripts/Invoke-DependencyAudit.ps1 -Mode Ci -Solution KeelMatrix.BehaviorOracle.sln
 
       - name: Verify telemetry remained suppressed
         shell: pwsh
@@ -202,6 +191,31 @@ jobs:
           if ($newFiles.Count -gt 0) {
             throw "Telemetry state changed during CI: $($newFiles -join ', ')."
           }
+
+  dependency-audit-required:
+    name: Required dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependency graph for explicit audit
+        run: dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config -p:NuGetAudit=false
+
+      - name: Run required fail-closed dependency audit
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln
+
+      - name: Demonstrate unavailable-advisory distinction
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Test-DependencyAudit.ps1
 
   package:
     name: Package / inspect and consume
@@ -268,59 +282,20 @@ jobs:
           --p:SymbolPackageFormat=snupkg
           --output ./artifacts/packages
 
-      - name: Verify exact package set and archive contents
+      - name: Inspect exact package and symbol contracts
         shell: pwsh
-        run: |
-          $packageDirectory = [IO.Path]::Combine($PWD.Path, 'artifacts', 'packages')
-          $expected = @(
-            'KeelMatrix.BehaviorOracle.0.1.0.nupkg',
-            'KeelMatrix.BehaviorOracle.0.1.0.snupkg'
-          ) | Sort-Object
-          $actual = @(Get-ChildItem -LiteralPath $packageDirectory -File | Select-Object -ExpandProperty Name | Sort-Object)
-          if (@(Compare-Object -ReferenceObject $expected -DifferenceObject $actual).Count -ne 0) {
-            throw "Unexpected package set. Expected: $($expected -join ', '). Actual: $($actual -join ', ')."
-          }
-
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $pathPattern = '(?i)(^|/)(AGENTS\.md|\.env(?:\.local)?|keelmatrix\.telemetry\.json|tests?|fixtures|artifacts|obj|bin|\.vs|\.vscode)(/|$)'
-          $textPattern = '(?i)((?:password|api[_-]?key|secret)\s*=|BEGIN (?:RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]+)'
-          $textExtensions = @('.nuspec', '.md', '.txt', '.json', '.xml', '.props', '.targets', '.cs', '.csproj')
-
-          foreach ($package in Get-ChildItem -LiteralPath $packageDirectory -File) {
-            $archive = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
-            try {
-              foreach ($entry in $archive.Entries) {
-                $entryName = $entry.FullName.Replace('\', '/')
-                if ($entryName -match $pathPattern) {
-                  throw "Forbidden package path '$entryName' found in $($package.Name)."
-                }
-
-                $extension = [IO.Path]::GetExtension($entryName)
-                if ($textExtensions -contains $extension.ToLowerInvariant() -and $entry.Length -gt 0) {
-                  $reader = [IO.StreamReader]::new($entry.Open())
-                  try {
-                    $content = $reader.ReadToEnd()
-                  }
-                  finally {
-                    $reader.Dispose()
-                  }
-
-                  if ($content -match $textPattern) {
-                    throw "Forbidden secret or internal-language text found in $($package.Name): $entryName."
-                  }
-                }
-              }
-            }
-            finally {
-              $archive.Dispose()
-            }
-          }
-
+        run: >
+          pwsh -NoProfile -File scripts/Verify-PackageContract.ps1
+          -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.nupkg
+          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.snupkg
+          -ExpectedRepositoryCommit $env:GITHUB_SHA
       - name: Install and smoke-test the packed tool
         shell: pwsh
         run: >
           pwsh -NoProfile -File scripts/Invoke-PackageSmoke.ps1
           -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.nupkg
+          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.snupkg
+          -ExpectedRepositoryCommit $env:GITHUB_SHA
           -Seed 12345
           -ScenarioBudget 20
           -ConfirmationRuns 2

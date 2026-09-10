@@ -227,7 +227,7 @@ public sealed class SurfaceDiscoveryTests
         try
         {
             var surface = new ApiSurfaceDiscoverer().DiscoverDirectory(baseline.FullName);
-            var descriptor = Assert.Single(surface.CallableMembers.Where(member => member.Signature == signature));
+            var descriptor = Assert.Single(surface.CallableMembers, member => member.Signature == signature);
             Assert.False(descriptor.IsSupported);
             Assert.Contains("unresolved call target", descriptor.UnsupportedReason, StringComparison.OrdinalIgnoreCase);
 
@@ -236,7 +236,7 @@ public sealed class SurfaceDiscoveryTests
                 candidate.FullName,
                 new ProbeOptions(ScenarioBudget: 1, ConfirmationRuns: 2));
 
-            var result = Assert.Single(report.ScenarioResults.Where(result => result.ApiSignature == signature));
+            var result = Assert.Single(report.ScenarioResults, result => result.ApiSignature == signature);
             Assert.Equal("SKIPPED", result.Classification);
             Assert.Equal(
                 report.UnsupportedApiCount,
@@ -247,11 +247,28 @@ public sealed class SurfaceDiscoveryTests
         }
         finally
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-            root.Delete(recursive: true);
+            DeleteWithRetry(root);
         }
+    }
+
+    private static void DeleteWithRetry(DirectoryInfo root)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            try
+            {
+                root.Delete(recursive: true);
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < 19)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Thread.Sleep(50);
+            }
+        }
+
+        root.Delete(recursive: true);
     }
 }
 

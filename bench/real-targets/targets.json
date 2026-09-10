@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "id": "humanizer-core",
+      "role": "deterministic-transformation",
+      "packageId": "Humanizer.Core",
+      "baseline": {
+        "version": "2.13.14",
+        "sha512": "322A4423045AE59E6B40F5F14E7D716CEB44A2178AFBF3A8CBC4A2DB96C457606E847EE2DBB3246F15F00F63B1269A6D3D9D259474D43E42F955088CC7A98BF5",
+        "asset": "lib/netstandard2.0/Humanizer.dll",
+        "source": "https://github.com/Humanizr/Humanizer@18167e56c082449cc4fe805b8429e3127a7b7f93"
+      },
+      "candidate": {
+        "version": "2.14.1",
+        "sha512": "CB3A8653F1CA34B67D52FAFA92F49CDF0615FD2E4EFC8BE4948516E5617B32E8AF18B63CC12E486672CF92DEC3D4A5BC12DD849E5D08DCBCE0DAF196336E17B3",
+        "asset": "lib/netstandard2.0/Humanizer.dll",
+        "source": "https://github.com/Humanizr/Humanizer@3ebc38de585fc641a04b0e78ed69468453b0f8a1"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "newtonsoft-json",
+      "role": "complex-deterministic-serialization",
+      "packageId": "Newtonsoft.Json",
+      "baseline": {
+        "version": "13.0.2",
+        "sha512": "D743AE673BAC17FDBF53C05983DBA2FFDB99D7E6AF8CF5FE008D57AA30B6C6CA615D672C4140EEC516E529EB6AD5ACF29C20B5CC059C86F98C80865652ACDDE1",
+        "asset": "lib/netstandard2.0/Newtonsoft.Json.dll",
+        "source": "https://github.com/JamesNK/Newtonsoft.Json@4fba53a324c445f06ee08e45a015c346000a7ef2"
+      },
+      "candidate": {
+        "version": "13.0.3",
+        "sha512": "99B252BC77D1C5F5F7B51FD4EA7D5653E9961D7B3061CF9207F8643A9C7CC9965EEBC84D6467F2989BB4723B1A244915CC232A78F894E8B748CA882A7C89FB92",
+        "asset": "lib/netstandard2.0/Newtonsoft.Json.dll",
+        "source": "https://github.com/JamesNK/Newtonsoft.Json@0a2e291c0d9c0c7675d445703e51750363a549ef"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "npgsql",
+      "role": "out-of-domain-database-network",
+      "packageId": "Npgsql",
+      "baseline": {
+        "version": "8.0.4",
+        "sha512": "DEA87E79E0769C0951A988221D4DB7F3732C0D87ED5C28E08BE716C98EE0CEB78C5CE157E48F6D64BD7A80882E072331FE84A09375C83CDFA2E7C20AFAD7646A",
+        "asset": "lib/net8.0/Npgsql.dll",
+        "source": "https://github.com/npgsql/npgsql@6990cceffbca2d2de4c5f12df32729bc78bbeafb"
+      },
+      "candidate": {
+        "version": "8.0.5",
+        "sha512": "537365A82F0539941E0FDD109D0493405359154E6D3C2A65235B6E67DB312FBFF8451F6EEBE9930AEF76B00326CA904115FD062AFE2AFE1EB80B1F1C6840871C",
+        "asset": "lib/net8.0/Npgsql.dll",
+        "source": "https://github.com/npgsql/npgsql@2e914cc92562216b479e90a72846ed2f09e7527a"
+      },
+      "dependencies": [
+        {
+          "packageId": "Microsoft.Extensions.Logging.Abstractions",
+          "version": "8.0.0",
+          "sha512": "50A0ADD96D30D90580FB8E02A25CEA0AA15F4D22744279B5ACFE18CC8568B74402AA062D5DB13CC5887A08BFD24E07CBC88B2FC10EE8EEC2C37EDF3BCDA7F8A7",
+          "asset": "lib/net8.0/Microsoft.Extensions.Logging.Abstractions.dll"
+        }
+      ]
+    }
+  ]
+}

@@ -14,6 +14,12 @@ dotnet tool uninstall --global KeelMatrix.BehaviorOracle
 
 The tool also works from a local tool manifest or an isolated `--tool-path` installation.
 
+## Package validation for maintainers
+
+The repository's package contract is checked against the actual `.nupkg` and `.snupkg` archives. `scripts/Verify-PackageContract.ps1` uses an explicit allowlist for runtime, symbol, source, and NuGet-generated metadata entries; validates package metadata, the 512x512 icon and SourceLink; rejects unexpected archive entries; and repeats packing to compare canonical archive hashes. The only canonicalization is for the random identifiers NuGet generates in the allowlisted core-properties relationship metadata.
+
+The package-consumer smoke uses a fresh `NUGET_PACKAGES` cache and a generated source-mapped NuGet configuration. `KeelMatrix.BehaviorOracle` can resolve only from the local candidate feed; its runtime dependency resolves from NuGet.org. It verifies the installed candidate package hash before exercising equivalent and planted-divergence comparisons.
+
 ## Five-minute comparison
 
 Build the baseline and candidate library artifacts into separate directories. The directories must contain the assemblies and dependencies needed to execute the compared APIs.
@@ -150,6 +156,14 @@ The repository includes a composite Action under `action/`. It builds the select
 
 The wrapper requires the tool version to be available from the configured package source. It does not replace ordinary build or API-compatibility checks.
 
+Maintainers can validate the committed wrapper with:
+
+```powershell
+pwsh -NoProfile -File .\action\Test-Action.ps1
+```
+
+The validation exercises equivalent, divergent, invalid-path, candidate-build-failure, and tool-install-failure cases. It also covers relative paths, spaces, Windows casing, exit-code propagation, and cleanup. The committed evidence is Windows PowerShell with .NET 8; Linux and macOS Action support is not claimed until independently exercised.
+
 ## Platform evidence and limitations
 
 The repository's CI validates the tool and worker/process scenarios with .NET 8.0 on `windows-latest`, `ubuntu-latest`, and `macos-latest` in its `platform` job. That matrix runs restore, a Release build with warnings as errors, format verification, the full test suite, the deterministic synthetic benchmark, a transitive dependency vulnerability check, and telemetry-suppression checks.
@@ -160,7 +174,7 @@ This evidence covers the tested .NET 8.0 tool and worker/process scenarios on th
 
 BehaviorOracle does not build source revisions as part of its core engine, guarantee arbitrary equivalence, infer author intent, compare performance, test concurrency semantics, or provide a hosted execution sandbox. Build baseline and candidate artifacts separately and inspect every reported difference in the context of your library's contract.
 
-The permanent synthetic corpus and benchmark recipe under `bench/` cover planted threshold, null/default, exception-type, collection-order, mutation, async, object-graph, nondeterministic, and external-state cases. Real-library value remains dependent on the target library's supported deterministic surface.
+The permanent synthetic corpus and benchmark recipe under `bench/` cover planted threshold, null/default, exception-type, collection-order, mutation, async, object-graph, nondeterministic, and external-state cases. The `benchmark` command is development-only and is absent from the shipped help; `bench/Run-Benchmark.ps1` enables it for the committed regression corpus. Real-library value remains dependent on the target library's supported deterministic surface.
 
 ## Findings checklist
 
