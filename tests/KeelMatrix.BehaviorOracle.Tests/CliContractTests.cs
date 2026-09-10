@@ -99,6 +99,29 @@ public sealed class CliContractTests
         Assert.Contains("version 2", result.Stderr, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Public_help_and_cli_expose_compare_without_the_development_benchmark()
+    {
+        using var fixture = ComparisonFixture.Create(equalArtifacts: true);
+        var oldBenchmarkSwitch = Environment.GetEnvironmentVariable(Program.DevelopmentBenchmarkEnvironmentVariable);
+        try
+        {
+            Environment.SetEnvironmentVariable(Program.DevelopmentBenchmarkEnvironmentVariable, null);
+            var help = await RunAsync(fixture, ["--help"]);
+            var benchmark = await RunAsync(fixture, ["benchmark", "--manifest", "manifest.json"]);
+
+            Assert.Equal(0, help.ExitCode);
+            Assert.Contains("behavior-oracle compare", help.Stdout, StringComparison.Ordinal);
+            Assert.DoesNotContain("benchmark", help.Stdout, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(2, benchmark.ExitCode);
+            Assert.Contains("Unknown command 'benchmark'", benchmark.Stderr, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(Program.DevelopmentBenchmarkEnvironmentVariable, oldBenchmarkSwitch);
+        }
+    }
+
     private static async Task<CliResult> RunAsync(ComparisonFixture fixture, IReadOnlyList<string> arguments)
         => await RunAsync(fixture.Baseline, fixture.Candidate, fixture.Config, arguments);
 
@@ -164,7 +187,27 @@ public sealed class CliContractTests
             return new SelfComparisonFixture(root, baseline, candidate, config);
         }
 
-        public void Dispose() => root.Delete(recursive: true);
+        public void Dispose() => DeleteWithRetry(root);
+    }
+
+    private static void DeleteWithRetry(DirectoryInfo root)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            try
+            {
+                root.Delete(recursive: true);
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < 19)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Thread.Sleep(50);
+            }
+        }
+
+        root.Delete(recursive: true);
     }
 
     private sealed class ComparisonFixture : IDisposable

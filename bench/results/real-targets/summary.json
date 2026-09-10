@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "generatedFor": "real-library-feasibility",
+  "configuration": {
+    "version": 1,
+    "seed": 12345,
+    "scenarioBudget": 32,
+    "confirmationRuns": 3
+  },
+  "engineAssemblySha512": "9D5CFED3C32E2E0CF474B7AA12C432D78C604A7716D07218D5D93402FCC130318C5EA839DB66123371306874D80FCA0880A19774557B06AD78300C0AA39B601A",
+  "environment": {
+    "osDescription": "Microsoft Windows 10.0.19045",
+    "runtimeIdentifier": "win-x64",
+    "sdkVersion": "8.0.425",
+    "runtimes": [
+      "Microsoft.AspNetCore.App 3.1.24 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 3.1.29 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 3.1.30 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 3.1.32 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 5.0.16 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 6.0.4 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 6.0.5 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 6.0.10 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 6.0.26 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 7.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 8.0.31 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 9.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.AspNetCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]",
+      "Microsoft.NETCore.App 3.1.24 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 3.1.30 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 3.1.32 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 5.0.16 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 6.0.4 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 6.0.5 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 6.0.10 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 6.0.26 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 7.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 8.0.31 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 9.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.NETCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]",
+      "Microsoft.WindowsDesktop.App 3.1.24 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 3.1.30 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 3.1.32 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 5.0.16 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 6.0.4 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 6.0.5 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 6.0.10 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 6.0.26 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 8.0.31 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 9.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+      "Microsoft.WindowsDesktop.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]"
+    ],
+    "culture": "en-US",
+    "uiCulture": "en-US"
+  },
+  "groundTruthNote": "Published-version comparisons have no planted oracle. Precision and recall are reported by the committed synthetic benchmark; real-target fields are null rather than inferred.",
+  "targets": [
+    {
+      "id": "humanizer-core",
+      "role": "deterministic-transformation",
+      "packageId": "Humanizer.Core",
+      "baseline": {
+        "version": "2.13.14",
+        "sha512": "322A4423045AE59E6B40F5F14E7D716CEB44A2178AFBF3A8CBC4A2DB96C457606E847EE2DBB3246F15F00F63B1269A6D3D9D259474D43E42F955088CC7A98BF5",
+        "asset": "lib/netstandard2.0/Humanizer.dll",
+        "source": "https://github.com/Humanizr/Humanizer@18167e56c082449cc4fe805b8429e3127a7b7f93"
+      },
+      "candidate": {
+        "version": "2.14.1",
+        "sha512": "CB3A8653F1CA34B67D52FAFA92F49CDF0615FD2E4EFC8BE4948516E5617B32E8AF18B63CC12E486672CF92DEC3D4A5BC12DD849E5D08DCBCE0DAF196336E17B3",
+        "asset": "lib/netstandard2.0/Humanizer.dll",
+        "source": "https://github.com/Humanizr/Humanizer@3ebc38de585fc641a04b0e78ed69468453b0f8a1"
+      },
+      "dependencies": [],
+      "reportPath": "bench/results/real-targets/humanizer-core.json",
+      "consolePath": "bench/results/real-targets/humanizer-core.console.txt",
+      "reportSha512": "8F6AAC016F9A0F6658F9743FB6FE634B3B5C07CAE0F13943E77EF453424C96CE50DDDBDECEB301FED14527BFBCBEC1FD53AAE667A0219832C11AC8133228F07E",
+      "report": {
+        "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
+        "trustworthy": true,
+        "discoveredBaselineApis": 392,
+        "discoveredCandidateApis": 414,
+        "matchedCallableApis": 392,
+        "eligibleSupportedApiPairs": 25,
+        "supportedApiPercentage": 6.377551020408164,
+        "exercisedApiCount": 25,
+        "generatedScenarios": 32,
+        "stableScenarios": 32,
+        "divergenceCount": 0,
+        "inconclusiveCount": 0,
+        "unsupportedCount": 0,
+        "unsupportedApiCount": 367,
+        "unsupportedOrInconclusiveRate": 0,
+        "executionFailureCount": 0
+      },
+      "groundTruth": "not-available-for-published-version-pair",
+      "precision": null,
+      "recall": null,
+      "timings": {
+        "consoleMedianComparisonMilliseconds": 807.5,
+        "consoleMedianMinimizationMilliseconds": null,
+        "jsonProcessWallClockMilliseconds": 27445.3,
+        "repeatJsonProcessWallClockMilliseconds": 26228.6
+      },
+      "reproducibility": {
+        "repeatedJsonExitCode": 0,
+        "repeatedJsonByteIdentical": true
+      },
+      "minimization": {
+        "Count": 0,
+        "WithMinimizedWitness": 0,
+        "MedianInputSize": null,
+        "MedianMinimizedWitnessSize": null,
+        "MedianReduction": null,
+        "ReproducibleWitnesses": 0,
+        "HumanReadable": "not-applicable-no-stable-divergences"
+      },
+      "customFactoriesOrGenerators": false
+    },
+    {
+      "id": "newtonsoft-json",
+      "role": "complex-deterministic-serialization",
+      "packageId": "Newtonsoft.Json",
+      "baseline": {
+        "version": "13.0.2",
+        "sha512": "D743AE673BAC17FDBF53C05983DBA2FFDB99D7E6AF8CF5FE008D57AA30B6C6CA615D672C4140EEC516E529EB6AD5ACF29C20B5CC059C86F98C80865652ACDDE1",
+        "asset": "lib/netstandard2.0/Newtonsoft.Json.dll",
+        "source": "https://github.com/JamesNK/Newtonsoft.Json@4fba53a324c445f06ee08e45a015c346000a7ef2"
+      },
+      "candidate": {
+        "version": "13.0.3",
+        "sha512": "99B252BC77D1C5F5F7B51FD4EA7D5653E9961D7B3061CF9207F8643A9C7CC9965EEBC84D6467F2989BB4723B1A244915CC232A78F894E8B748CA882A7C89FB92",
+        "asset": "lib/netstandard2.0/Newtonsoft.Json.dll",
+        "source": "https://github.com/JamesNK/Newtonsoft.Json@0a2e291c0d9c0c7675d445703e51750363a549ef"
+      },
+      "dependencies": [],
+      "reportPath": "bench/results/real-targets/newtonsoft-json.json",
+      "consolePath": "bench/results/real-targets/newtonsoft-json.console.txt",
+      "reportSha512": "8A48AE73D3AEF09327954765EAA0ED5D3C4D13EE5600783788BA2250E1551BA0BD3F58DCA97477F921B77257CDEBE5EBDFDC80A3C5B8EE7AB6BFC1DE3629562B",
+      "report": {
+        "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
+        "trustworthy": true,
+        "discoveredBaselineApis": 687,
+        "discoveredCandidateApis": 687,
+        "matchedCallableApis": 687,
+        "eligibleSupportedApiPairs": 1,
+        "supportedApiPercentage": 0.1455604075691412,
+        "exercisedApiCount": 1,
+        "generatedScenarios": 32,
+        "stableScenarios": 32,
+        "divergenceCount": 0,
+        "inconclusiveCount": 0,
+        "unsupportedCount": 0,
+        "unsupportedApiCount": 686,
+        "unsupportedOrInconclusiveRate": 0,
+        "executionFailureCount": 0
+      },
+      "groundTruth": "not-available-for-published-version-pair",
+      "precision": null,
+      "recall": null,
+      "timings": {
+        "consoleMedianComparisonMilliseconds": 837.7,
+        "consoleMedianMinimizationMilliseconds": null,
+        "jsonProcessWallClockMilliseconds": 27443.1,
+        "repeatJsonProcessWallClockMilliseconds": 27269.1
+      },
+      "reproducibility": {
+        "repeatedJsonExitCode": 0,
+        "repeatedJsonByteIdentical": true
+      },
+      "minimization": {
+        "Count": 0,
+        "WithMinimizedWitness": 0,
+        "MedianInputSize": null,
+        "MedianMinimizedWitnessSize": null,
+        "MedianReduction": null,
+        "ReproducibleWitnesses": 0,
+        "HumanReadable": "not-applicable-no-stable-divergences"
+      },
+      "customFactoriesOrGenerators": false
+    },
+    {
+      "id": "npgsql",
+      "role": "out-of-domain-database-network",
+      "packageId": "Npgsql",
+      "baseline": {
+        "version": "8.0.4",
+        "sha512": "DEA87E79E0769C0951A988221D4DB7F3732C0D87ED5C28E08BE716C98EE0CEB78C5CE157E48F6D64BD7A80882E072331FE84A09375C83CDFA2E7C20AFAD7646A",
+        "asset": "lib/net8.0/Npgsql.dll",
+        "source": "https://github.com/npgsql/npgsql@6990cceffbca2d2de4c5f12df32729bc78bbeafb"
+      },
+      "candidate": {
+        "version": "8.0.5",
+        "sha512": "537365A82F0539941E0FDD109D0493405359154E6D3C2A65235B6E67DB312FBFF8451F6EEBE9930AEF76B00326CA904115FD062AFE2AFE1EB80B1F1C6840871C",
+        "asset": "lib/net8.0/Npgsql.dll",
+        "source": "https://github.com/npgsql/npgsql@2e914cc92562216b479e90a72846ed2f09e7527a"
+      },
+      "dependencies": [
+        {
+          "packageId": "Microsoft.Extensions.Logging.Abstractions",
+          "version": "8.0.0",
+          "sha512": "50A0ADD96D30D90580FB8E02A25CEA0AA15F4D22744279B5ACFE18CC8568B74402AA062D5DB13CC5887A08BFD24E07CBC88B2FC10EE8EEC2C37EDF3BCDA7F8A7",
+          "asset": "lib/net8.0/Microsoft.Extensions.Logging.Abstractions.dll"
+        }
+      ],
+      "reportPath": "bench/results/real-targets/npgsql.json",
+      "consolePath": "bench/results/real-targets/npgsql.console.txt",
+      "reportSha512": "49B3B268EDAA5E93A6F2483DCADBD34D5EBD29FC765946086C44F75BB4873E193E943ED4F77B80C2FF796F4FA1B68D3A659118E940CA6D493767648E8548F420",
+      "report": {
+        "resultState": "NONDETERMINISTIC_INCONCLUSIVE",
+        "trustworthy": true,
+        "discoveredBaselineApis": 838,
+        "discoveredCandidateApis": 839,
+        "matchedCallableApis": 838,
+        "eligibleSupportedApiPairs": 32,
+        "supportedApiPercentage": 3.8186157517899764,
+        "exercisedApiCount": 32,
+        "generatedScenarios": 32,
+        "stableScenarios": 29,
+        "divergenceCount": 0,
+        "inconclusiveCount": 3,
+        "unsupportedCount": 0,
+        "unsupportedApiCount": 806,
+        "unsupportedOrInconclusiveRate": 0.09375,
+        "executionFailureCount": 0
+      },
+      "groundTruth": "not-available-for-published-version-pair",
+      "precision": null,
+      "recall": null,
+      "timings": {
+        "consoleMedianComparisonMilliseconds": 1102.8,
+        "consoleMedianMinimizationMilliseconds": null,
+        "jsonProcessWallClockMilliseconds": 29705.6,
+        "repeatJsonProcessWallClockMilliseconds": 29919.6
+      },
+      "reproducibility": {
+        "repeatedJsonExitCode": 0,
+        "repeatedJsonByteIdentical": true
+      },
+      "minimization": {
+        "Count": 0,
+        "WithMinimizedWitness": 0,
+        "MedianInputSize": null,
+        "MedianMinimizedWitnessSize": null,
+        "MedianReduction": null,
+        "ReproducibleWitnesses": 0,
+        "HumanReadable": "not-applicable-no-stable-divergences"
+      },
+      "customFactoriesOrGenerators": false
+    }
+  ]
+}

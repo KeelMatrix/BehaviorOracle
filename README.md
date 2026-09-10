@@ -4,15 +4,22 @@ Public API compatibility can stay green while behavior changes underneath it. Be
 
 BehaviorOracle is evidence gathering, not a proof of arbitrary semantic equivalence and not an automatic breaking-change judgment.
 
-## Install, update, and uninstall
+## Try the current unreleased build
+
+The first `0.1.0` package is not published yet. Run the current source from a clean clone with:
 
 ```powershell
-dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0
-dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.0
-dotnet tool uninstall --global KeelMatrix.BehaviorOracle
+dotnet restore .\KeelMatrix.BehaviorOracle.sln --configfile .\NuGet.config -p:NuGetAudit=false
+dotnet run --project .\src\KeelMatrix.BehaviorOracle -- --help
 ```
 
-The tool also works from a local tool manifest or an isolated `--tool-path` installation.
+To exercise the packed tool before publication, use the repository's package smoke command described below. It installs from an isolated local feed rather than changing your global tool installation.
+
+## Package validation for maintainers
+
+The repository's package contract is checked against the actual `.nupkg` and `.snupkg` archives. `scripts/Verify-PackageContract.ps1` uses an explicit allowlist for runtime, symbol, source, and NuGet-generated metadata entries; validates package metadata, the 512x512 icon and SourceLink; rejects unexpected archive entries; and repeats packing to compare canonical archive hashes. The only canonicalization is for the random identifiers NuGet generates in the allowlisted core-properties relationship metadata.
+
+The package-consumer smoke uses a fresh `NUGET_PACKAGES` cache and a generated source-mapped NuGet configuration. `KeelMatrix.BehaviorOracle` resolves only from the local candidate feed; its runtime dependency resolves from NuGet.org. It verifies the installed candidate package hash before exercising equivalent and planted-divergence comparisons.
 
 ## Five-minute comparison
 
@@ -136,7 +143,7 @@ The shared telemetry package also honors `DOTNET_CLI_TELEMETRY_OPTOUT`, `DO_NOT_
 
 ## GitHub Action wrapper
 
-The repository includes a composite Action under `action/`. It builds the selected baseline and candidate Git revisions and invokes the same tool:
+The repository includes a composite Action under `action/`. After the tool package is available from the configured package source, it builds the selected baseline and candidate Git revisions and invokes the same tool:
 
 ```yaml
 - name: Compare library behavior
@@ -150,17 +157,25 @@ The repository includes a composite Action under `action/`. It builds the select
 
 The wrapper requires the tool version to be available from the configured package source. It does not replace ordinary build or API-compatibility checks.
 
+Maintainers can validate the committed wrapper on Windows with:
+
+```powershell
+pwsh -NoProfile -File .\action\Test-Action.ps1
+```
+
+The validation exercises equivalent, divergent, invalid-path, candidate-build-failure, and tool-install-failure cases. It also covers relative paths, spaces, Windows casing, exit-code propagation, and cleanup. The committed evidence is Windows PowerShell with .NET 8; Linux and macOS Action support is not claimed until independently exercised.
+
 ## Platform evidence and limitations
 
-The repository's CI validates the tool and worker/process scenarios with .NET 8.0 on `windows-latest`, `ubuntu-latest`, and `macos-latest` in its `platform` job. That matrix runs restore, a Release build with warnings as errors, format verification, the full test suite, the deterministic synthetic benchmark, a transitive dependency vulnerability check, and telemetry-suppression checks.
+The repository's CI validates the tool and worker/process scenarios with .NET 8.0 on `windows-latest`, `ubuntu-latest`, and `macos-latest` in its `platform` job. That matrix runs restore, a Release build with warnings as errors, format verification, the full test suite, the deterministic synthetic benchmark, the ordinary dependency-audit mode, and telemetry-suppression checks. The Windows matrix leg also validates the committed Action wrapper.
 
-After the platform matrix passes, the dependent `package` job runs on `ubuntu-latest`. It packs the `KeelMatrix.BehaviorOracle` 0.1.0 package and symbols, inspects the exact archive contents, installs the packed tool from an isolated feed, exercises equivalent and planted-divergence comparisons, and verifies telemetry remains suppressed. See the [CI workflow](.github/workflows/ci.yml).
+The separate `dependency-audit-required` job runs on `ubuntu-latest` and fails closed when vulnerability-advisory data is unavailable. After the platform matrix passes, the dependent `package` job runs on `ubuntu-latest`. It packs the `KeelMatrix.BehaviorOracle` 0.1.0 package and symbols, inspects the exact archive contents, installs the packed tool from an isolated feed, exercises equivalent and planted-divergence comparisons, and verifies telemetry remains suppressed. See the [CI workflow](https://github.com/KeelMatrix/BehaviorOracle/blob/main/.github/workflows/ci.yml).
 
 This evidence covers the tested .NET 8.0 tool and worker/process scenarios on those GitHub-hosted runner images. It does not guarantee that every compared assembly runs on every operating system; behavior remains subject to the compared library and host environment.
 
 BehaviorOracle does not build source revisions as part of its core engine, guarantee arbitrary equivalence, infer author intent, compare performance, test concurrency semantics, or provide a hosted execution sandbox. Build baseline and candidate artifacts separately and inspect every reported difference in the context of your library's contract.
 
-The permanent synthetic corpus and benchmark recipe under `bench/` cover planted threshold, null/default, exception-type, collection-order, mutation, async, object-graph, nondeterministic, and external-state cases. Real-library value remains dependent on the target library's supported deterministic surface.
+The permanent synthetic corpus and benchmark recipe under `bench/` cover planted threshold, null/default, exception-type, collection-order, mutation, async, object-graph, nondeterministic, and external-state cases. The `benchmark` command is development-only and is absent from the shipped help; `bench/Run-Benchmark.ps1` enables it for the committed regression corpus. Real-library value remains dependent on the target library's supported deterministic surface.
 
 ## Findings checklist
 

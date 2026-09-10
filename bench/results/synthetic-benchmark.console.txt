@@ -1,0 +1,142 @@
+BEHAVIORAL DIVERGENCE
+Matched callable APIs: 15
+Eligible supported API pairs: 10
+APIs actually exercised: 10
+Unsupported APIs: 5
+Generated scenarios: 80
+Stable scenarios: 80
+Behavioral divergences: 35
+Unsupported/inconclusive scenarios: 0
+Median comparison time: 821.2 ms
+Median witness-minimization time: 0.0 ms
+Seed: 12345
+
+API:
+  BehaviorOracleCorpus.Calculator::Apply(BehaviorOracleCorpus.Order)->System.Int32
+Input witness:
+  arg0 = {Label: " ", Total: 100}
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"argumentsAfter":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"receiverAfter":{"kind":"object","typeName":"BehaviorOracleCorpus.Calculator","scalar":null,"items":null,"members":{"Offset":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}}},"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"argumentsAfter":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"receiverAfter":{"kind":"object","typeName":"BehaviorOracleCorpus.Calculator","scalar":null,"items":null,"members":{"Offset":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}}},"isRepresentable":true}
+Minimized witness:
+  arg0 = {Total: 100}
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 0
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"2","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 0
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 100
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"102","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 100
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = -1
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"-1","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"-1","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"-1","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"-1","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = -1
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 0
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"2","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 0
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 1000
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1001","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"1000","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"1000","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1002","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"1000","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"1000","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 1000
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 1
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"2","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"3","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 1
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 101
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"102","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"103","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 101
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::AsyncResult(System.Int32)->System.Threading.Tasks.Task<System.Int32>
+Input witness:
+  arg0 = 101
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"102","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"103","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 101
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.
+
+API:
+  BehaviorOracleCorpus.SemanticChanges::Bucket(System.Int32)->System.Int32
+Input witness:
+  arg0 = 100
+Baseline:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Candidate:
+  {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
+Minimized witness:
+  arg0 = 100
+Reproduce with seed: 12345
+This is evidence of a behavioral difference, not an automatic breaking-change judgment.

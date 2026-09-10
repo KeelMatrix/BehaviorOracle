@@ -1,0 +1,11 @@
+NONDETERMINISTIC_INCONCLUSIVE
+Matched callable APIs: 838
+Eligible supported API pairs: 32
+APIs actually exercised: 32
+Unsupported APIs: 806
+Generated scenarios: 32
+Stable scenarios: 29
+Behavioral divergences: 0
+Unsupported/inconclusive scenarios: 3
+Median comparison time: 1102.8 ms
+Seed: 12345

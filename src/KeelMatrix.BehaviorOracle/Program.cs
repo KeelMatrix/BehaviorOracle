@@ -6,6 +6,8 @@ namespace KeelMatrix.BehaviorOracle;
 
 internal static class Program
 {
+    internal const string DevelopmentBenchmarkEnvironmentVariable = "BEHAVIOR_ORACLE_ENABLE_BENCHMARK";
+
     public static async Task<int> Main(string[] args)
     {
         CultureInfoDefaults.Apply();
@@ -27,7 +29,7 @@ internal static class Program
             return command switch
             {
                 "compare" => await RunCompareAsync(args[1..]).ConfigureAwait(false),
-                "benchmark" => await RunBenchmarkAsync(args[1..]).ConfigureAwait(false),
+                "benchmark" when IsDevelopmentBenchmarkEnabled() => await RunBenchmarkAsync(args[1..]).ConfigureAwait(false),
                 _ => throw new ArgumentException($"Unknown command '{args[0]}'.")
             };
         }
@@ -59,7 +61,7 @@ internal static class Program
 
     private static async Task<int> RunBenchmarkAsync(string[] args)
     {
-        var values = ArgumentMap.Parse(args);
+        var values = ArgumentMap.Parse(args, includeDevelopmentBenchmarkOptions: true);
         var manifest = values.Required("manifest");
         var options = values.ToOptions();
         var report = await new BenchmarkRunner().RunAsync(
@@ -71,6 +73,12 @@ internal static class Program
             ? report.DivergenceCount == 0 ? 0 : 1
             : 2;
     }
+
+    private static bool IsDevelopmentBenchmarkEnabled() =>
+        string.Equals(
+            Environment.GetEnvironmentVariable(DevelopmentBenchmarkEnvironmentVariable),
+            "1",
+            StringComparison.Ordinal);
 
     private static void WriteReport(ProbeReport report, string format)
     {
@@ -102,6 +110,10 @@ internal static class Program
         Console.WriteLine($"Behavioral divergences: {report.DivergenceCount}");
         Console.WriteLine($"Unsupported/inconclusive scenarios: {report.UnsupportedCount + report.InconclusiveCount}");
         Console.WriteLine($"Median comparison time: {report.MedianComparisonMilliseconds.ToString("F1", CultureInfo.InvariantCulture)} ms");
+        if (report.DivergenceCount > 0)
+        {
+            Console.WriteLine($"Median witness-minimization time: {report.MedianMinimizationMilliseconds.ToString("F1", CultureInfo.InvariantCulture)} ms");
+        }
         Console.WriteLine($"Seed: {report.Seed}");
 
         foreach (var divergence in report.Divergences.Take(10))
@@ -169,7 +181,6 @@ internal static class Program
             BehaviorOracle
 
             behavior-oracle compare --baseline <dir> --candidate <dir> [options]
-            behavior-oracle benchmark --manifest <file> [options]
 
             Options:
               --config <file>              Read version-1 JSON options (required for compare).
@@ -178,7 +189,6 @@ internal static class Program
               --confirmation-runs <number> Stable confirmation runs (default 3).
               --timeout <milliseconds>     Per-worker timeout.
               --format console|json        Report format.
-              --output <file>              Write a benchmark JSON report.
 
             A successful result is equivalent only within the tested semantic domain.
             """
@@ -189,18 +199,19 @@ internal static class Program
 internal sealed class ArgumentMap
 {
     private readonly Dictionary<string, string> values;
-    private static readonly HashSet<string> KnownKeys =
+    private static readonly HashSet<string> PublicKeys =
     [
         "baseline", "candidate", "config", "seed", "scenario-budget", "confirmation-runs",
-        "timeout", "format", "manifest", "output"
+        "timeout", "format"
     ];
+    private static readonly HashSet<string> DevelopmentBenchmarkKeys = ["manifest", "output"];
 
     private ArgumentMap(Dictionary<string, string> values)
     {
         this.values = values;
     }
 
-    public static ArgumentMap Parse(IEnumerable<string> args)
+    public static ArgumentMap Parse(IEnumerable<string> args, bool includeDevelopmentBenchmarkOptions = false)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var arguments = args.ToArray();
@@ -218,7 +229,8 @@ internal sealed class ArgumentMap
                 continue;
             }
 
-            if (!KnownKeys.Contains(key))
+            if (!PublicKeys.Contains(key) &&
+                (!includeDevelopmentBenchmarkOptions || !DevelopmentBenchmarkKeys.Contains(key)))
             {
                 throw new ArgumentException($"Unknown option '--{key}'.");
             }

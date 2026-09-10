@@ -6,11 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Changed
+No unreleased changes.
 
-- Keep installation, comparison, and CI validation guidance aligned with the current tool behavior.
-
-## [0.1.0] - Unreleased
+## [0.1.0] - Planned (not yet published)
 
 ### Added
 

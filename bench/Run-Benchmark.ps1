@@ -56,9 +56,28 @@ try {
 
     $reportDirectory = Join-Path $PSScriptRoot 'results'
     $report = Join-Path $reportDirectory 'synthetic-benchmark.json'
+    $consoleReport = Join-Path $reportDirectory 'synthetic-benchmark.console.txt'
     New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
-    dotnet $tool benchmark --manifest (Join-Path $corpus 'manifest.json') --seed $Seed --scenario-budget $ScenarioBudget --confirmation-runs $ConfirmationRuns --format json --output $report
-    $benchmarkExitCode = $LASTEXITCODE
+    $previousBenchmarkSwitch = $env:BEHAVIOR_ORACLE_ENABLE_BENCHMARK
+    $env:BEHAVIOR_ORACLE_ENABLE_BENCHMARK = '1'
+    try {
+        dotnet $tool benchmark --manifest (Join-Path $corpus 'manifest.json') --seed $Seed --scenario-budget $ScenarioBudget --confirmation-runs $ConfirmationRuns --format json --output $report
+        $benchmarkExitCode = $LASTEXITCODE
+        $consoleOutput = (& dotnet $tool benchmark --manifest (Join-Path $corpus 'manifest.json') --seed $Seed --scenario-budget $ScenarioBudget --confirmation-runs $ConfirmationRuns --format console 2>&1 | Out-String).TrimEnd()
+        $consoleExitCode = $LASTEXITCODE
+        [IO.File]::WriteAllText($consoleReport, $consoleOutput, [Text.UTF8Encoding]::new($false))
+        if ($consoleExitCode -ne $benchmarkExitCode) {
+            throw "JSON and console benchmark exit codes differed: json=$benchmarkExitCode, console=$consoleExitCode."
+        }
+    }
+    finally {
+        if ($null -eq $previousBenchmarkSwitch) {
+            Remove-Item Env:BEHAVIOR_ORACLE_ENABLE_BENCHMARK -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:BEHAVIOR_ORACLE_ENABLE_BENCHMARK = $previousBenchmarkSwitch
+        }
+    }
     switch ($benchmarkExitCode) {
         0 {
             Write-Output "Benchmark completed with no behavioral divergence. Report: $report"
