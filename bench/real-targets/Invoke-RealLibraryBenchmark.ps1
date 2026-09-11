@@ -21,6 +21,17 @@ $toolPath = if ([string]::IsNullOrWhiteSpace($ToolPath)) {
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
 
+function Assert-Condition {
+    param(
+        [Parameter(Mandatory)][bool]$Condition,
+        [Parameter(Mandatory)][string]$Message
+    )
+
+    if (-not $Condition) {
+        throw $Message
+    }
+}
+
 if (-not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
     throw "Target metadata is missing: $metadataPath"
 }
