@@ -10,15 +10,30 @@ Run from the repository root after restore and a Release build:
 
 ```powershell
 $env:KEELMATRIX_NO_TELEMETRY = '1'
+$commit = (git rev-parse HEAD).Trim()
 dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config -p:NuGetAudit=false
-dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror
-pwsh -NoProfile -File .\scripts\Test-ReproducibleEngine.ps1
+dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror `
+  -p:Version=0.1.0 -p:PackageVersion=0.1.0 `
+  -p:SourceRevisionId=$commit -p:RepositoryCommit=$commit `
+  -p:ContinuousIntegrationBuild=true -p:Deterministic=true `
+  -p:DeterministicSourcePaths=true -p:PathMap='$(MSBuildProjectDirectory)=/_/' `
+  -p:IncludeSourceRevisionInInformationalVersion=false `
+  -p:AssemblyVersion=0.1.0.0 -p:FileVersion=0.1.0.0
+pwsh -NoProfile -File .\scripts\Test-ReproducibleEngine.ps1 -Commit $commit
 pwsh -NoProfile -File .\bench\real-targets\Invoke-RealLibraryBenchmark.ps1
 ```
 
 ## Engine provenance
 
-`summary.json` records `engineAssemblySha512` as the SHA-512 of the Release `KeelMatrix.BehaviorOracle.dll` used for the real-target run. The build enables deterministic source paths and maps each project root to `/_/`; the committed `scripts/Test-ReproducibleEngine.ps1` recipe checks out the exact commit into two separate clean paths with LF-normalized Git text and asserts identical engine hashes after Release builds with the same version and SourceLink commit inputs. The recorded hash is regenerated from a fresh run after that assertion passes, so it identifies the path-independent engine build for the committed source ref and build inputs.
+`summary.json` records `engineAssemblySha512` as the SHA-512 of the Release `KeelMatrix.BehaviorOracle.dll` used for the real-target run and repeats the complete `engineBuildContract`. The hash-relevant build contract is Release/net8.0 with version/package version `0.1.0`, assembly/file version `0.1.0.0`, `Deterministic=true`, `ContinuousIntegrationBuild=true`, `DeterministicSourcePaths=true`, `PathMap=$(MSBuildProjectDirectory)=/_/`, and `IncludeSourceRevisionInInformationalVersion=false`. `SourceRevisionId` and `RepositoryCommit` are still set to the exact checked-out ref for SourceLink/PDB metadata; disabling their inclusion in informational version metadata keeps the hashed engine assembly independent of commit decoration while the source tree is bound by the exact ref checkout.
+
+`Test-ReproducibleEngine.ps1 -Commit <full-sha>` checks out that exact ref twice with LF-normalized Git text, builds the engine in separate output roots, and requires equal SHA-512 values. `-ScratchDirectory`, `-CloneRoot`, and `-BuildRoot` override the parent locations when a runner restricts its default temporary directory. The clone and build roots must be writable by child Git and .NET SDK processes. If a restricted harness still denies child SDK writes, run the same two clean-clone `git clone`, `git checkout --detach`, `dotnet restore`, and `dotnet build` commands manually with two pre-authorized clone/build roots, using the properties above, then compare the two `Get-FileHash -Algorithm SHA512` results. The manual clean-clone result is the acceptance proof; do not substitute a build from the working tree.
+
+## Stable and volatile evidence
+
+The report JSON is the stable evidence contract: repeated JSON commands must have the same exit code and bytes. The recipe also compares the committed report hash and stable summary fields (counts, result classifications, API identities, report paths, observations, signatures, witnesses, package identities, and reproducibility/minimization outcomes) and compares console output after removing timing lines. A stable-field change fails the recipe unless `-AllowStableEvidenceChanges` is supplied for an intentional approved evidence update.
+
+Timing and host-environment snapshots are explicitly volatile. `targets[].timings.consoleMedianComparisonMilliseconds`, `targets[].timings.consoleMedianMinimizationMilliseconds`, `targets[].timings.jsonProcessWallClockMilliseconds`, `targets[].timings.repeatJsonProcessWallClockMilliseconds`, the `environment` object, and console timing lines may vary between runs, machines, SDK patch versions, and host load. No exact equality or numeric tolerance is required for those fields; they are retained for context and must remain finite and non-negative. A fresh evidence run may therefore change those values while stable evidence remains unchanged.
 
 The script bounds each tool process at 300,000 ms and captures each stdout/stderr stream at 4 MiB. It records the runtime environment and tool assembly SHA-512 in [`results/real-targets/summary.json`](results/real-targets/summary.json). All raw bounded outputs are committed:
 

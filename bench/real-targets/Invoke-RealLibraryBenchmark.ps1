@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [switch]$KeepScratch
+    [switch]$KeepScratch,
+    [string]$ScratchDirectory,
+    [switch]$AllowStableEvidenceChanges
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,6 +11,7 @@ $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $metadataPath = Join-Path $PSScriptRoot 'targets.json'
 $configPath = Join-Path $PSScriptRoot 'config.json'
 $rawResultsDirectory = Join-Path $repo 'bench\results\real-targets'
+$committedSummaryPath = Join-Path $rawResultsDirectory 'summary.json'
 $toolPath = Join-Path $repo 'src\KeelMatrix.BehaviorOracle\bin\Release\net8.0\KeelMatrix.BehaviorOracle.dll'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
@@ -28,10 +31,16 @@ if ($metadata.version -ne 1 -or $metadata.targets.Count -lt 3) {
     throw 'Target metadata must be version 1 and contain all three real-library targets.'
 }
 
-$scratch = Join-Path ([System.IO.Path]::GetTempPath()) "behaviororacle-real-targets-$([Guid]::NewGuid().ToString('N'))"
+$scratchRoot = if ([string]::IsNullOrWhiteSpace($ScratchDirectory)) {
+    [System.IO.Path]::GetTempPath()
+} else {
+    (New-Item -ItemType Directory -Path $ScratchDirectory -Force).FullName
+}
+$scratch = Join-Path $scratchRoot "bo-real-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
 $packageDirectory = Join-Path $scratch 'packages'
 $artifactDirectory = Join-Path $scratch 'artifacts'
-New-Item -ItemType Directory -Path $packageDirectory, $artifactDirectory, $rawResultsDirectory -Force | Out-Null
+$generatedResultsDirectory = Join-Path $scratch 'results'
+New-Item -ItemType Directory -Path $packageDirectory, $artifactDirectory, $generatedResultsDirectory -Force | Out-Null
 
 function Get-PackageExtract {
     param(
@@ -217,6 +226,77 @@ function Get-DivergenceStats {
     }
 }
 
+function Get-StableConsoleText {
+    param([Parameter(Mandatory)][string]$Text)
+
+    $stableLines = @(
+        ($Text.TrimEnd([char[]]"`r`n") -split "`r?`n") |
+            Where-Object { $_ -notmatch '^(Median comparison time|Median witness-minimization time): ' }
+    )
+    return $stableLines -join "`n"
+}
+
+function Get-StableSummary {
+    param([Parameter(Mandatory)]$Summary)
+
+    return [ordered]@{
+        schemaVersion = $Summary.schemaVersion
+        generatedFor = $Summary.generatedFor
+        configuration = $Summary.configuration
+        groundTruthNote = $Summary.groundTruthNote
+        targets = @($Summary.targets | ForEach-Object {
+            [ordered]@{
+                id = $_.id
+                role = $_.role
+                packageId = $_.packageId
+                baseline = $_.baseline
+                candidate = $_.candidate
+                dependencies = @($_.dependencies)
+                reportPath = $_.reportPath
+                consolePath = $_.consolePath
+                reportSha512 = $_.reportSha512
+                report = $_.report
+                groundTruth = $_.groundTruth
+                precision = $_.precision
+                recall = $_.recall
+                reproducibility = $_.reproducibility
+                minimization = $_.minimization
+                customFactoriesOrGenerators = $_.customFactoriesOrGenerators
+            }
+        })
+    }
+}
+
+function ConvertTo-CanonicalJson {
+    param([Parameter(Mandatory)]$Value)
+
+    return $Value | ConvertTo-Json -Depth 30 -Compress
+}
+
+function Assert-VolatileTiming {
+    param(
+        [Parameter(Mandatory)][double]$Value,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    Assert-Condition (-not [double]::IsNaN($Value) -and -not [double]::IsInfinity($Value) -and $Value -ge 0) "$Name must be a finite non-negative timing value."
+}
+
+function Assert-StableEvidence {
+    param([Parameter(Mandatory)]$Summary)
+
+    if ($AllowStableEvidenceChanges -or -not (Test-Path -LiteralPath $committedSummaryPath -PathType Leaf)) {
+        return
+    }
+
+    $committed = Get-Content -LiteralPath $committedSummaryPath -Raw | ConvertFrom-Json
+    $expectedStable = ConvertTo-CanonicalJson (Get-StableSummary -Summary $Summary)
+    $committedStable = ConvertTo-CanonicalJson (Get-StableSummary -Summary $committed)
+    if ($expectedStable -cne $committedStable) {
+        throw "Stable real-target evidence changed. Review counts, classifications, report hashes, signatures, and witnesses; use -AllowStableEvidenceChanges only for an intentional approved evidence update."
+    }
+}
+
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
 $toolHash = (Get-FileHash -LiteralPath $toolPath -Algorithm SHA512).Hash
 $environment = [ordered]@{
@@ -242,14 +322,14 @@ try {
         )
 
         $consoleRun = Invoke-Oracle -Arguments ($commonArguments + @('--format', 'console'))
-        $consolePath = Join-Path $rawResultsDirectory "$($target.id).console.txt"
+        $consolePath = Join-Path $generatedResultsDirectory "$($target.id).console.txt"
         [IO.File]::WriteAllText($consolePath, $consoleRun.Stdout, $utf8)
         if ($consoleRun.ExitCode -notin @(0, 1)) {
             throw "$($target.id) console comparison failed with exit code $($consoleRun.ExitCode): $($consoleRun.Stderr.Trim())"
         }
 
         $jsonRun = Invoke-Oracle -Arguments ($commonArguments + @('--format', 'json'))
-        $jsonPath = Join-Path $rawResultsDirectory "$($target.id).json"
+        $jsonPath = Join-Path $generatedResultsDirectory "$($target.id).json"
         [IO.File]::WriteAllText($jsonPath, $jsonRun.Stdout, $utf8)
         if ($jsonRun.ExitCode -notin @(0, 1)) {
             throw "$($target.id) JSON comparison failed with exit code $($jsonRun.ExitCode): $($jsonRun.Stderr.Trim())"
@@ -276,6 +356,18 @@ try {
             unsupportedOrInconclusiveScenarios = Get-ConsoleMetric $consoleRun.Stdout 'Unsupported/inconclusive scenarios'
             medianComparisonMilliseconds = Get-ConsoleMetric $consoleRun.Stdout 'Median comparison time'
             medianMinimizationMilliseconds = if ($report.divergenceCount -eq 0) { $null } else { Get-ConsoleMetric $consoleRun.Stdout 'Median witness-minimization time' }
+        }
+        Assert-VolatileTiming -Value $consoleMetrics.medianComparisonMilliseconds -Name "$($target.id) median comparison time"
+        if ($null -ne $consoleMetrics.medianMinimizationMilliseconds) {
+            Assert-VolatileTiming -Value $consoleMetrics.medianMinimizationMilliseconds -Name "$($target.id) median witness-minimization time"
+        }
+        Assert-VolatileTiming -Value $jsonRun.ElapsedMilliseconds -Name "$($target.id) JSON process wall-clock time"
+        Assert-VolatileTiming -Value $repeatRun.ElapsedMilliseconds -Name "$($target.id) repeated JSON process wall-clock time"
+        if (-not $AllowStableEvidenceChanges -and (Test-Path -LiteralPath (Join-Path $rawResultsDirectory "$($target.id).console.txt") -PathType Leaf)) {
+            $committedConsole = Get-Content -LiteralPath (Join-Path $rawResultsDirectory "$($target.id).console.txt") -Raw
+            if ((Get-StableConsoleText -Text $consoleRun.Stdout) -cne (Get-StableConsoleText -Text $committedConsole)) {
+                throw "$($target.id) stable console evidence changed. Review counts and classifications; use -AllowStableEvidenceChanges only for an intentional approved evidence update."
+            }
         }
         foreach ($metric in @('matchedCallableApis', 'eligibleSupportedApiPairs', 'exercisedApiCount', 'unsupportedApiCount', 'generatedScenarios', 'stableScenarios', 'divergenceCount')) {
             if ([int]$report.$metric -ne [int]$consoleMetrics[$metric]) {
@@ -335,12 +427,45 @@ try {
         generatedFor = 'real-library-feasibility'
         configuration = $config
         engineAssemblySha512 = $toolHash
+        engineBuildContract = [ordered]@{
+            configuration = 'Release'
+            targetFramework = 'net8.0'
+            version = '0.1.0'
+            packageVersion = '0.1.0'
+            deterministic = $true
+            continuousIntegrationBuild = $true
+            deterministicSourcePaths = $true
+            pathMap = '$(MSBuildProjectDirectory)=/_/'
+            includeSourceRevisionInInformationalVersion = $false
+            sourceRevisionId = 'exact checked-out ref (PDB/SourceLink only)'
+            repositoryCommit = 'exact checked-out ref (PDB/SourceLink only)'
+        }
+        timingContract = [ordered]@{
+            version = 1
+            classification = 'environment-specific-volatile'
+            acceptedVariability = 'Timing values may vary between runs, machines, SDK patch versions, and host load. No exact equality or numeric tolerance is required.'
+            stableEquality = 'Committed equality covers report JSON bytes and hashes, counts, classifications, API signatures, observations, witnesses, package identities, and reproducibility outcomes.'
+            volatileFields = @(
+                'targets[].timings.consoleMedianComparisonMilliseconds'
+                'targets[].timings.consoleMedianMinimizationMilliseconds'
+                'targets[].timings.jsonProcessWallClockMilliseconds'
+                'targets[].timings.repeatJsonProcessWallClockMilliseconds'
+                'environment'
+                'console timing lines'
+            )
+        }
         environment = $environment
         groundTruthNote = 'Published-version comparisons have no planted oracle. Precision and recall are reported by the committed synthetic benchmark; real-target fields are null rather than inferred.'
         targets = $targetResults
     }
-    $summaryPath = Join-Path $rawResultsDirectory 'summary.json'
-    [IO.File]::WriteAllText($summaryPath, ($summary | ConvertTo-Json -Depth 20), $utf8)
+    Assert-StableEvidence -Summary $summary
+
+    New-Item -ItemType Directory -Path $rawResultsDirectory -Force | Out-Null
+    foreach ($target in $metadata.targets) {
+        Copy-Item -LiteralPath (Join-Path $generatedResultsDirectory "$($target.id).json") -Destination (Join-Path $rawResultsDirectory "$($target.id).json") -Force
+        Copy-Item -LiteralPath (Join-Path $generatedResultsDirectory "$($target.id).console.txt") -Destination (Join-Path $rawResultsDirectory "$($target.id).console.txt") -Force
+    }
+    [IO.File]::WriteAllText($committedSummaryPath, ($summary | ConvertTo-Json -Depth 30), $utf8)
     Write-Output "Real-library benchmark completed. Raw results: $rawResultsDirectory"
 }
 finally {

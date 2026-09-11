@@ -2,7 +2,9 @@
 param(
     [string]$RepositoryPath = (Split-Path -Parent $PSScriptRoot),
     [string]$Commit,
-    [string]$ScratchDirectory
+    [string]$ScratchDirectory,
+    [string]$CloneRoot,
+    [string]$BuildRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,6 +48,8 @@ function Invoke-Captured {
 }
 
 $repository = (Resolve-Path -LiteralPath $RepositoryPath).Path
+$repositoryStatus = Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'status', '--porcelain')
+Assert-Condition ([string]::IsNullOrWhiteSpace($repositoryStatus)) 'The repository must be clean before proving a committed ref reproducible.'
 $resolvedCommit = if ([string]::IsNullOrWhiteSpace($Commit)) {
     Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'rev-parse', 'HEAD')
 } else {
@@ -58,19 +62,29 @@ if ($remoteUrl -notmatch '^https://github\.com/KeelMatrix/BehaviorOracle(?:\.git
     $remoteUrl = 'https://github.com/KeelMatrix/BehaviorOracle.git'
 }
 
+$runToken = [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $scratchRoot = if ([string]::IsNullOrWhiteSpace($ScratchDirectory)) {
     [IO.Path]::GetTempPath()
 } else {
     (New-Item -ItemType Directory -Path $ScratchDirectory -Force).FullName
 }
-$workRoot = Join-Path $scratchRoot "behaviororacle-repro-$([Guid]::NewGuid().ToString('N'))"
+$cloneParent = if ([string]::IsNullOrWhiteSpace($CloneRoot)) { $scratchRoot } else { (New-Item -ItemType Directory -Path $CloneRoot -Force).FullName }
+$buildParent = if ([string]::IsNullOrWhiteSpace($BuildRoot)) { $null } else { (New-Item -ItemType Directory -Path $BuildRoot -Force).FullName }
+$cloneWorkRoot = Join-Path $cloneParent "bo-clones-$runToken"
+$buildWorkRoot = if ($null -eq $buildParent) { $null } else { Join-Path $buildParent "bo-builds-$runToken" }
 $hashes = [Collections.Generic.List[string]]::new()
 
 try {
-    New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $cloneWorkRoot -Force | Out-Null
+    if ($null -ne $buildWorkRoot) {
+        New-Item -ItemType Directory -Path $buildWorkRoot -Force | Out-Null
+    }
 
     foreach ($name in @('clone-a', 'clone-b')) {
-        $clone = Join-Path $workRoot $name
+        $clone = Join-Path $cloneWorkRoot $name
+        $build = if ($null -eq $buildWorkRoot) { $null } else { Join-Path $buildWorkRoot $name }
+        $intermediateOutput = if ($null -eq $build) { $null } else { Join-Path $build 'obj' }
+        $output = if ($null -eq $build) { $null } else { Join-Path $build 'bin' }
         Invoke-Checked -File 'git' -Arguments @(
             '-c', 'core.autocrlf=false',
             '-c', 'core.eol=lf',
@@ -84,35 +98,57 @@ try {
         $status = Invoke-Captured -File 'git' -Arguments @('-C', $clone, 'status', '--porcelain')
         Assert-Condition ([string]::IsNullOrWhiteSpace($status)) "Clone '$name' is not clean."
 
-        $solution = Join-Path $clone 'KeelMatrix.BehaviorOracle.sln'
         $project = Join-Path $clone 'src/KeelMatrix.BehaviorOracle/KeelMatrix.BehaviorOracle.csproj'
         $config = Join-Path $clone 'NuGet.config'
-        Invoke-Checked -File 'dotnet' -Arguments @(
-            'restore', $solution, '--configfile', $config, '-p:NuGetAudit=false'
-        )
-        Invoke-Checked -File 'dotnet' -Arguments @(
-            'build', $project,
-            '--configuration', 'Release',
-            '--no-restore',
-            '--warnaserror',
+        $buildProperties = @(
             '-p:Version=0.1.0',
             '-p:PackageVersion=0.1.0',
             "-p:SourceRevisionId=$resolvedCommit",
             "-p:RepositoryCommit=$resolvedCommit",
             '-p:ContinuousIntegrationBuild=true',
-            '-p:Deterministic=true'
+            '-p:Deterministic=true',
+            '-p:DeterministicSourcePaths=true',
+            '-p:IncludeSourceRevisionInInformationalVersion=false',
+            '-p:AssemblyVersion=0.1.0.0',
+            '-p:FileVersion=0.1.0.0'
         )
+        if ($null -eq $build) {
+            $buildProperties += '-p:PathMap=$(MSBuildProjectDirectory)=/_/'
+        } else {
+            $buildProperties += ('-p:PathMap=$(MSBuildProjectDirectory)=/_/;' + $build + '=/_build/')
+            $buildProperties += "-p:BaseIntermediateOutputPath=$intermediateOutput\"
+            $buildProperties += "-p:BaseOutputPath=$output\"
+        }
 
-        $engine = Join-Path $clone 'src/KeelMatrix.BehaviorOracle/bin/Release/net8.0/KeelMatrix.BehaviorOracle.dll'
+        Invoke-Checked -File 'dotnet' -Arguments (@(
+            'restore', $project, '--configfile', $config,
+            '-p:NuGetAudit=false'
+        ) + $buildProperties)
+        Invoke-Checked -File 'dotnet' -Arguments (@(
+            'build', $project,
+            '--configuration', 'Release',
+            '--no-restore',
+            '--disable-build-servers',
+            '--warnaserror'
+        ) + $buildProperties)
+
+        $engine = if ($null -eq $build) {
+            Join-Path $clone 'src/KeelMatrix.BehaviorOracle/bin/Release/net8.0/KeelMatrix.BehaviorOracle.dll'
+        } else {
+            Join-Path $output 'Release/net8.0/KeelMatrix.BehaviorOracle.dll'
+        }
         Assert-Condition (Test-Path -LiteralPath $engine -PathType Leaf) "Release engine was not produced for '$name'."
         $hashes.Add((Get-FileHash -LiteralPath $engine -Algorithm SHA512).Hash.ToUpperInvariant())
     }
 
+    Assert-Condition ($hashes.Count -eq 2) 'Expected two clean clone engine hashes.'
     Assert-Condition ($hashes[0] -ceq $hashes[1]) "Path-separated Release engine hashes differ: $($hashes[0]) and $($hashes[1])."
     Write-Output "Reproducible engine build passed for $resolvedCommit. SHA-512: $($hashes[0])"
 }
 finally {
-    if (Test-Path -LiteralPath $workRoot) {
-        Remove-Item -LiteralPath $workRoot -Recurse -Force
+    foreach ($root in @($cloneWorkRoot, $buildWorkRoot) | Where-Object { $null -ne $_ }) {
+        if (Test-Path -LiteralPath $root) {
+            Remove-Item -LiteralPath $root -Recurse -Force
+        }
     }
 }
