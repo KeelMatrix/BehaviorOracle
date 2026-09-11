@@ -116,10 +116,8 @@ try {
             '-p:AssemblyVersion=0.1.0.0',
             '-p:FileVersion=0.1.0.0'
         )
-        if ($null -eq $build) {
-            $buildProperties += '-p:PathMap=$(MSBuildProjectDirectory)=/_/'
-        } else {
-            $buildProperties += ('-p:PathMap=$(MSBuildProjectDirectory)=/_/;' + $build + '=/_build/')
+        $buildProperties += '-p:PathMap=$(MSBuildProjectDirectory)=/_/'
+        if ($null -ne $build) {
             $buildProperties += "-p:BaseIntermediateOutputPath=$intermediateOutput\"
             $buildProperties += "-p:BaseOutputPath=$output\"
         }
