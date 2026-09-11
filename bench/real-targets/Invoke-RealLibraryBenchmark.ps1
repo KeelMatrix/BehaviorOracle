@@ -2,7 +2,8 @@
 param(
     [switch]$KeepScratch,
     [string]$ScratchDirectory,
-    [switch]$AllowStableEvidenceChanges
+    [switch]$AllowStableEvidenceChanges,
+    [string]$ToolPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,7 +13,11 @@ $metadataPath = Join-Path $PSScriptRoot 'targets.json'
 $configPath = Join-Path $PSScriptRoot 'config.json'
 $rawResultsDirectory = Join-Path $repo 'bench\results\real-targets'
 $committedSummaryPath = Join-Path $rawResultsDirectory 'summary.json'
-$toolPath = Join-Path $repo 'src\KeelMatrix.BehaviorOracle\bin\Release\net8.0\KeelMatrix.BehaviorOracle.dll'
+$toolPath = if ([string]::IsNullOrWhiteSpace($ToolPath)) {
+    Join-Path $repo 'src\KeelMatrix.BehaviorOracle\bin\Release\net8.0\KeelMatrix.BehaviorOracle.dll'
+} else {
+    (Resolve-Path -LiteralPath $ToolPath).Path
+}
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
 

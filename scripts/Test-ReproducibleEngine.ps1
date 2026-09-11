@@ -4,7 +4,8 @@ param(
     [string]$Commit,
     [string]$ScratchDirectory,
     [string]$CloneRoot,
-    [string]$BuildRoot
+    [string]$BuildRoot,
+    [switch]$KeepScratch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -73,6 +74,7 @@ $buildParent = if ([string]::IsNullOrWhiteSpace($BuildRoot)) { $null } else { (N
 $cloneWorkRoot = Join-Path $cloneParent "bo-clones-$runToken"
 $buildWorkRoot = if ($null -eq $buildParent) { $null } else { Join-Path $buildParent "bo-builds-$runToken" }
 $hashes = [Collections.Generic.List[string]]::new()
+$engines = [Collections.Generic.List[string]]::new()
 
 try {
     New-Item -ItemType Directory -Path $cloneWorkRoot -Force | Out-Null
@@ -139,16 +141,23 @@ try {
         }
         Assert-Condition (Test-Path -LiteralPath $engine -PathType Leaf) "Release engine was not produced for '$name'."
         $hashes.Add((Get-FileHash -LiteralPath $engine -Algorithm SHA512).Hash.ToUpperInvariant())
+        $engines.Add($engine)
     }
 
     Assert-Condition ($hashes.Count -eq 2) 'Expected two clean clone engine hashes.'
     Assert-Condition ($hashes[0] -ceq $hashes[1]) "Path-separated Release engine hashes differ: $($hashes[0]) and $($hashes[1])."
     Write-Output "Reproducible engine build passed for $resolvedCommit. SHA-512: $($hashes[0])"
+    if ($KeepScratch) {
+        Write-Output "Clean clone engine A: $($engines[0])"
+        Write-Output "Clean clone engine B: $($engines[1])"
+    }
 }
 finally {
-    foreach ($root in @($cloneWorkRoot, $buildWorkRoot) | Where-Object { $null -ne $_ }) {
-        if (Test-Path -LiteralPath $root) {
-            Remove-Item -LiteralPath $root -Recurse -Force
+    if (-not $KeepScratch) {
+        foreach ($root in @($cloneWorkRoot, $buildWorkRoot) | Where-Object { $null -ne $_ }) {
+            if (Test-Path -LiteralPath $root) {
+                Remove-Item -LiteralPath $root -Recurse -Force
+            }
         }
     }
 }
