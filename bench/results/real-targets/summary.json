@@ -7,7 +7,37 @@
     "scenarioBudget": 32,
     "confirmationRuns": 3
   },
-  "engineAssemblySha512": "51B3621D69E01FED1B3A1F2DBEC7FCC3FEB2D46CF1A1E18B282C83AFDB2B6BF4EF26134714408BDB4B52A762D81060AB1A58A1CAACBBC86A1B2AF8D16EE789A0",
+  "engineAssemblySha512": "C9467E1AA19234DDB7AE3DD779F19D38FFA8E31A1BF3013138A1D0BED48E79A262B290459BF231E3752B95B69C62BDF616144CA4EFA991FAC49F81C70CF55B6B",
+  "engineBuildContract": {
+    "configuration": "Release",
+    "targetFramework": "net8.0",
+    "version": "0.1.0",
+    "packageVersion": "0.1.0",
+    "deterministic": true,
+    "continuousIntegrationBuild": true,
+    "deterministicSourcePaths": true,
+    "pathMap": "$(MSBuildProjectDirectory)=/_/",
+    "includeSourceRevisionInInformationalVersion": false,
+    "debugType": "none",
+    "debugSymbols": false,
+    "sourceRevisionId": "empty for the hash-only DLL build",
+    "repositoryCommit": "empty for the hash-only DLL build",
+    "refSelection": "exact full SHA passed to Test-EngineReproducibility.ps1 -Commit"
+  },
+  "timingContract": {
+    "version": 1,
+    "classification": "environment-specific-volatile",
+    "acceptedVariability": "Timing values may vary between runs, machines, SDK patch versions, and host load. No exact equality or numeric tolerance is required.",
+    "stableEquality": "Committed equality covers report JSON bytes and hashes, counts, classifications, API signatures, observations, witnesses, package identities, and reproducibility outcomes.",
+    "volatileFields": [
+      "targets[].timings.consoleMedianComparisonMilliseconds",
+      "targets[].timings.consoleMedianMinimizationMilliseconds",
+      "targets[].timings.jsonProcessWallClockMilliseconds",
+      "targets[].timings.repeatJsonProcessWallClockMilliseconds",
+      "environment",
+      "console timing lines"
+    ]
+  },
   "environment": {
     "osDescription": "Microsoft Windows 10.0.19045",
     "runtimeIdentifier": "win-x64",
@@ -97,10 +127,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 1273.3,
+        "consoleMedianComparisonMilliseconds": 914.6,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 38094.9,
-        "repeatJsonProcessWallClockMilliseconds": 33857.9
+        "jsonProcessWallClockMilliseconds": 28413.0,
+        "repeatJsonProcessWallClockMilliseconds": 27984.9
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -159,10 +189,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 1246.4,
+        "consoleMedianComparisonMilliseconds": 862.4,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 34223.7,
-        "repeatJsonProcessWallClockMilliseconds": 31893.2
+        "jsonProcessWallClockMilliseconds": 28857.9,
+        "repeatJsonProcessWallClockMilliseconds": 29416.9
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -228,10 +258,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 1055.5,
+        "consoleMedianComparisonMilliseconds": 989.3,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 36164.0,
-        "repeatJsonProcessWallClockMilliseconds": 37832.7
+        "jsonProcessWallClockMilliseconds": 30061.6,
+        "repeatJsonProcessWallClockMilliseconds": 31335.7
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,

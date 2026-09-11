@@ -10,10 +10,31 @@ Run from the repository root after restore and a Release build:
 
 ```powershell
 $env:KEELMATRIX_NO_TELEMETRY = '1'
+$commit = (git rev-parse HEAD).Trim()
 dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config -p:NuGetAudit=false
-dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror
+dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror `
+  -p:Version=0.1.0 -p:PackageVersion=0.1.0 `
+  -p:SourceRevisionId= -p:RepositoryCommit= `
+  -p:ContinuousIntegrationBuild=true -p:Deterministic=true `
+  -p:DeterministicSourcePaths=true -p:PathMap='$(MSBuildProjectDirectory)=/_/' `
+  -p:IncludeSourceRevisionInInformationalVersion=false `
+  -p:DebugType=none -p:DebugSymbols=false `
+  -p:AssemblyVersion=0.1.0.0 -p:FileVersion=0.1.0.0
+pwsh -NoProfile -File .\scripts\Test-EngineReproducibility.ps1 -Commit $commit
 pwsh -NoProfile -File .\bench\real-targets\Invoke-RealLibraryBenchmark.ps1
 ```
+
+## Engine provenance
+
+`summary.json` records `engineAssemblySha512` as the SHA-512 of the Release `KeelMatrix.BehaviorOracle.dll` used for the real-target run and repeats the complete `engineBuildContract`. The hash-relevant build contract is Release/net8.0 with version/package version `0.1.0`, assembly/file version `0.1.0.0`, `Deterministic=true`, `ContinuousIntegrationBuild=true`, `DeterministicSourcePaths=true`, `PathMap=$(MSBuildProjectDirectory)=/_/`, `IncludeSourceRevisionInInformationalVersion=false`, `DebugType=none`, `DebugSymbols=false`, and empty `SourceRevisionId`/`RepositoryCommit` metadata. The exact candidate ref is selected by its full SHA and checked out as the source tree; clearing commit metadata and disabling debug/PDB emission keeps the hashed engine assembly independent of commit decoration. Package/release builds retain their separate current-commit SourceLink/PDB properties.
+
+`Test-EngineReproducibility.ps1 -Commit <full-sha>` checks out that exact ref twice with LF-normalized Git text, builds the engine in separate output roots, and requires equal SHA-512 values. Use `-KeepScratch` when the clean-clone engine path is needed as the `-ToolPath` input for the real-target recipe. `-ScratchDirectory`, `-CloneRoot`, and `-BuildRoot` override the parent locations when a runner restricts its default temporary directory. The clone and build roots must be writable by child Git and .NET SDK processes. Because the PE debug identity includes the deterministic PDB inputs, the hash-relevant build must use the LF-normalized clean checkout; a CRLF worktree build is not interchangeable. If a restricted harness still denies child SDK writes, run the same two clean-clone `git clone`, `git checkout --detach`, `dotnet restore`, and `dotnet build` commands manually with two pre-authorized clone/build roots, using the properties above, then compare the two `Get-FileHash -Algorithm SHA512` results. The manual clean-clone result is the acceptance proof; do not substitute a build from the working tree.
+
+## Stable and volatile evidence
+
+The report JSON is the stable evidence contract: repeated JSON commands must have the same exit code and bytes. The recipe also compares the committed report hash and stable summary fields (counts, result classifications, API identities, report paths, observations, signatures, witnesses, package identities, and reproducibility/minimization outcomes) and compares console output after removing timing lines. A stable-field change fails the recipe unless `-AllowStableEvidenceChanges` is supplied for an intentional approved evidence update.
+
+Timing and host-environment snapshots are explicitly volatile. `targets[].timings.consoleMedianComparisonMilliseconds`, `targets[].timings.consoleMedianMinimizationMilliseconds`, `targets[].timings.jsonProcessWallClockMilliseconds`, `targets[].timings.repeatJsonProcessWallClockMilliseconds`, the `environment` object, and console timing lines may vary between runs, machines, SDK patch versions, and host load. No exact equality or numeric tolerance is required for those fields; they are retained for context and must remain finite and non-negative. A fresh evidence run may therefore change those values while stable evidence remains unchanged.
 
 The script bounds each tool process at 300,000 ms and captures each stdout/stderr stream at 4 MiB. It records the runtime environment and tool assembly SHA-512 in [`results/real-targets/summary.json`](results/real-targets/summary.json). All raw bounded outputs are committed:
 
@@ -44,13 +65,13 @@ The full baseline/candidate package SHA-512 values are committed alongside these
 - Scenario budget: 32 per target
 - Confirmation runs: 3
 - Custom factories/generators: none for any target
-- Engine assembly SHA-512: recorded in `summary.json`. The value is path-independent: the engine is built with `Deterministic`, `ContinuousIntegrationBuild`, and `DeterministicSourcePaths`, and `scripts/Test-EngineReproducibility.ps1` re-verifies the guarantee by building two clean clones at different paths and asserting identical engine hashes. `.gitattributes` enforces `eol=lf` so a fresh checkout always produces the LF source inputs the recorded hash binds to.
+- Engine assembly SHA-512: recorded in `summary.json`
 
 | Target | Result | Discovered baseline/candidate | Matched | Supported pairs | Supported % | Exercised | Generated/stable | Divergences | Inconclusive | Unsupported APIs | Median comparison | Repeated JSON |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Humanizer.Core | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 392 / 414 | 392 | 25 | 6.38% | 25 | 32 / 32 | 0 | 0 | 367 | 1,273.3 ms | byte-identical |
-| Newtonsoft.Json | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 687 / 687 | 687 | 1 | 0.15% | 1 | 32 / 32 | 0 | 0 | 686 | 1,246.4 ms | byte-identical |
-| Npgsql | `NONDETERMINISTIC_INCONCLUSIVE` | 838 / 839 | 838 | 32 | 3.82% | 32 | 32 / 29 | 0 | 3 | 806 | 1,055.5 ms | byte-identical |
+| Humanizer.Core | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 392 / 414 | 392 | 25 | 6.38% | 25 | 32 / 32 | 0 | 0 | 367 | 807.5 ms | byte-identical |
+| Newtonsoft.Json | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 687 / 687 | 687 | 1 | 0.15% | 1 | 32 / 32 | 0 | 0 | 686 | 837.7 ms | byte-identical |
+| Npgsql | `NONDETERMINISTIC_INCONCLUSIVE` | 838 / 839 | 838 | 32 | 3.82% | 32 | 32 / 29 | 0 | 3 | 806 | 1,102.8 ms | byte-identical |
 
 The real targets exercised 58 supported API pairs and produced 93 stable scenarios without any mandatory custom generation. The deterministic transformation target supplied 25 automatically exercised APIs. The more complex serialization target was intentionally reported honestly at one supported API. Npgsql produced three inconclusive scenarios and no divergence; the raw diagnostics show conservative classification rather than forced execution through network/database state.
 
@@ -64,7 +85,7 @@ Real-target minimization is not applicable because no stable real divergence was
 | At least 70% recall on supported planted changes | **PASS** | Synthetic corpus: 35/35 expected divergence scenarios detected, 100% recall. |
 | No recurring false-positive class requiring domain-specific suppression | **PASS** | Synthetic corpus: 0 false divergence scenarios; hidden time/randomness/external-state cases were skipped. Real pairs produced 0 divergences. |
 | Useful minimized witnesses for most detected simple divergences | **PASS** | 35/35 synthetic divergence records include minimized witnesses; console output shows API, input, both observations, minimized witness, and seed. No real divergence was available to score. |
-| Bounded runtime suitable for ordinary CI | **PASS** | Synthetic median comparison: 822.9 ms for 80 scenarios; real-target per-scenario medians: 1,055.5–1,273.3 ms, with bounded end-to-end JSON runs of about 34.2–38.1 s per 32-scenario target. |
+| Bounded runtime suitable for ordinary CI | **PASS** | Synthetic median comparison: 822.9 ms for 80 scenarios; real-target per-scenario medians: 807.5–1,102.8 ms, with bounded end-to-end JSON runs of about 26.2–29.9 s per 32-scenario target. |
 | Conservative deterministic/nondeterministic classification | **PASS** | Synthetic unsupported state cases are skipped; Npgsql has 3 inconclusive scenarios and 0 reported divergences. Repeated JSON output is byte-identical for all three targets. |
 | Meaningful real-library value without mandatory custom factories/generators | **PASS (narrow domain)** | 58 real API pairs were exercised automatically and 93 scenarios were stable; 25 Humanizer APIs received deterministic comparison without custom setup. Coverage is intentionally low on the complex and out-of-domain targets and remains an explicit limitation. |
 

@@ -1,6 +1,11 @@
 [CmdletBinding()]
 param(
-    [string]$RepositoryPath = (Get-Location).Path
+    [string]$RepositoryPath = (Split-Path -Parent $PSScriptRoot),
+    [string]$Commit,
+    [string]$ScratchDirectory,
+    [string]$CloneRoot,
+    [string]$BuildRoot,
+    [switch]$KeepScratch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,75 +28,136 @@ function Invoke-Checked {
         [Parameter(Mandatory = $false)][string[]]$Arguments = @()
     )
 
-    $output = & $File @Arguments 2>&1
+    & $File @Arguments
     if ($LASTEXITCODE -ne 0) {
-        $summary = ($output | Out-String).Trim()
-        throw "Command '$File $($Arguments -join ' ')' failed with exit code $LASTEXITCODE. $summary"
+        throw "Command '$File' failed with exit code $LASTEXITCODE."
     }
 }
 
-$repo = (Resolve-Path -LiteralPath $RepositoryPath).Path
-Assert-Condition (Test-Path -LiteralPath (Join-Path $repo 'KeelMatrix.BehaviorOracle.sln') -PathType Leaf) "Repository solution was not found under: $repo"
+function Invoke-Captured {
+    param(
+        [Parameter(Mandatory = $true)][string]$File,
+        [Parameter(Mandatory = $false)][string[]]$Arguments = @()
+    )
 
-$head = (& git -C $repo rev-parse HEAD 2>&1 | Out-String).Trim()
-Assert-Condition ($LASTEXITCODE -eq 0 -and $head -match '^[0-9a-fA-F]{40}$') 'Unable to resolve the repository HEAD commit.'
-
-$originUrl = (& git -C $repo remote get-url origin 2>&1 | Out-String).Trim()
-Assert-Condition ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($originUrl)) 'Unable to resolve the repository origin URL.'
-
-$solution = 'KeelMatrix.BehaviorOracle.sln'
-$engine = 'src/KeelMatrix.BehaviorOracle/bin/Release/net8.0/KeelMatrix.BehaviorOracle.dll'
-$scratch = Join-Path ([IO.Path]::GetTempPath()) "behaviororacle-engine-repro-$([Guid]::NewGuid().ToString('N'))"
-$cloneA = Join-Path $scratch 'clone-a'
-$cloneB = Join-Path $scratch 'clone-b'
-
-function Get-EngineSha512 {
-    param([Parameter(Mandatory = $true)][string]$Clone)
-
-    git clone --no-local $repo $Clone *> $null
-    Assert-Condition ($LASTEXITCODE -eq 0) "Failed to clone the repository into: $Clone"
-    git -C $Clone remote set-url origin $originUrl
-    git -C $Clone checkout $head *> $null
-    Assert-Condition ($LASTEXITCODE -eq 0) "Failed to check out $head in: $Clone"
-
-    $previousLocation = Get-Location
-    try {
-        Set-Location -LiteralPath $Clone
-        $env:KEELMATRIX_NO_TELEMETRY = '1'
-        Invoke-Checked 'dotnet' @('restore', $solution, '--configfile', 'NuGet.config', '-p:NuGetAudit=false')
-        Invoke-Checked 'dotnet' @('build', $solution, '--configuration', 'Release', '--no-restore', '--warnaserror')
-    }
-    finally {
-        Set-Location -LiteralPath $previousLocation
+    $output = (& $File @Arguments 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        throw "Command '$File' failed with exit code $LASTEXITCODE. Output: $output"
     }
 
-    $enginePath = Join-Path $Clone $engine
-    Assert-Condition (Test-Path -LiteralPath $enginePath -PathType Leaf) "The engine assembly was not produced: $enginePath"
-    return (Get-FileHash -LiteralPath $enginePath -Algorithm SHA512).Hash
+    return $output
 }
+
+$repository = (Resolve-Path -LiteralPath $RepositoryPath).Path
+$repositoryStatus = Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'status', '--porcelain')
+Assert-Condition ([string]::IsNullOrWhiteSpace($repositoryStatus)) 'The repository must be clean before proving a committed ref reproducible.'
+$resolvedCommit = if ([string]::IsNullOrWhiteSpace($Commit)) {
+    Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'rev-parse', 'HEAD')
+} else {
+    $Commit.Trim()
+}
+Assert-Condition ($resolvedCommit -match '^[0-9a-fA-F]{40}$') "Commit '$resolvedCommit' is not a full Git SHA."
+
+$remoteUrl = Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'remote', 'get-url', 'origin')
+if ($remoteUrl -notmatch '^https://github\.com/KeelMatrix/BehaviorOracle(?:\.git)?$') {
+    $remoteUrl = 'https://github.com/KeelMatrix/BehaviorOracle.git'
+}
+
+$runToken = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+$scratchRoot = if ([string]::IsNullOrWhiteSpace($ScratchDirectory)) {
+    [IO.Path]::GetTempPath()
+} else {
+    (New-Item -ItemType Directory -Path $ScratchDirectory -Force).FullName
+}
+$cloneParent = if ([string]::IsNullOrWhiteSpace($CloneRoot)) { $scratchRoot } else { (New-Item -ItemType Directory -Path $CloneRoot -Force).FullName }
+$buildParent = if ([string]::IsNullOrWhiteSpace($BuildRoot)) { $null } else { (New-Item -ItemType Directory -Path $BuildRoot -Force).FullName }
+$cloneWorkRoot = Join-Path $cloneParent "bo-clones-$runToken"
+$buildWorkRoot = if ($null -eq $buildParent) { $null } else { Join-Path $buildParent "bo-builds-$runToken" }
+$hashes = [Collections.Generic.List[string]]::new()
+$engines = [Collections.Generic.List[string]]::new()
 
 try {
-    New-Item -ItemType Directory -Path $scratch -Force | Out-Null
+    New-Item -ItemType Directory -Path $cloneWorkRoot -Force | Out-Null
+    if ($null -ne $buildWorkRoot) {
+        New-Item -ItemType Directory -Path $buildWorkRoot -Force | Out-Null
+    }
 
-    $hashA = Get-EngineSha512 -Clone $cloneA
-    $hashB = Get-EngineSha512 -Clone $cloneB
+    foreach ($name in @('clone-a', 'clone-b')) {
+        $clone = Join-Path $cloneWorkRoot $name
+        $build = if ($null -eq $buildWorkRoot) { $null } else { Join-Path $buildWorkRoot $name }
+        $intermediateOutput = if ($null -eq $build) { $null } else { Join-Path $build 'obj' }
+        $output = if ($null -eq $build) { $null } else { Join-Path $build 'bin' }
+        Invoke-Checked -File 'git' -Arguments @(
+            '-c', 'core.autocrlf=false',
+            '-c', 'core.eol=lf',
+            'clone', '--no-local', '--no-checkout', $repository, $clone
+        )
+        Invoke-Checked -File 'git' -Arguments @('-C', $clone, 'config', 'core.autocrlf', 'false')
+        Invoke-Checked -File 'git' -Arguments @('-C', $clone, 'config', 'core.eol', 'lf')
+        Invoke-Checked -File 'git' -Arguments @('-C', $clone, 'remote', 'set-url', 'origin', $remoteUrl)
+        Invoke-Checked -File 'git' -Arguments @('-C', $clone, 'checkout', '--detach', $resolvedCommit)
 
-    Write-Output "HEAD: $head"
-    Write-Output "Clone A: $cloneA"
-    Write-Output "Clone A engine SHA-512: $hashA"
-    Write-Output "Clone B: $cloneB"
-    Write-Output "Clone B engine SHA-512: $hashB"
+        $status = Invoke-Captured -File 'git' -Arguments @('-C', $clone, 'status', '--porcelain')
+        Assert-Condition ([string]::IsNullOrWhiteSpace($status)) "Clone '$name' is not clean."
 
-    Assert-Condition ([string]::Equals($hashA, $hashB, [StringComparison]::OrdinalIgnoreCase)) 'The engine assembly hash differed across two clean clone paths; the build is not path-independent.'
-    Write-Output 'Engine reproducibility passed: two clean clones at different paths produced identical engine SHA-512.'
-    exit 0
-}
-catch {
-    [Console]::Error.WriteLine("Engine reproducibility check failed: $($_.Exception.Message)")
-    exit 1
+        $project = Join-Path $clone 'src/KeelMatrix.BehaviorOracle/KeelMatrix.BehaviorOracle.csproj'
+        $config = Join-Path $clone 'NuGet.config'
+        $buildProperties = @(
+            '-p:Version=0.1.0',
+            '-p:PackageVersion=0.1.0',
+            '-p:SourceRevisionId=',
+            '-p:RepositoryCommit=',
+            '-p:ContinuousIntegrationBuild=true',
+            '-p:Deterministic=true',
+            '-p:DeterministicSourcePaths=true',
+            '-p:IncludeSourceRevisionInInformationalVersion=false',
+            '-p:DebugType=none',
+            '-p:DebugSymbols=false',
+            '-p:AssemblyVersion=0.1.0.0',
+            '-p:FileVersion=0.1.0.0'
+        )
+        $buildProperties += '-p:PathMap=$(MSBuildProjectDirectory)=/_/'
+        if ($null -ne $build) {
+            $buildProperties += "-p:BaseIntermediateOutputPath=$intermediateOutput\"
+            $buildProperties += "-p:BaseOutputPath=$output\"
+        }
+
+        Invoke-Checked -File 'dotnet' -Arguments (@(
+            'restore', $project, '--configfile', $config,
+            '-p:NuGetAudit=false'
+        ) + $buildProperties)
+        Invoke-Checked -File 'dotnet' -Arguments (@(
+            'build', $project,
+            '--configuration', 'Release',
+            '--no-restore',
+            '--disable-build-servers',
+            '--warnaserror'
+        ) + $buildProperties)
+
+        $engine = if ($null -eq $build) {
+            Join-Path $clone 'src/KeelMatrix.BehaviorOracle/bin/Release/net8.0/KeelMatrix.BehaviorOracle.dll'
+        } else {
+            Join-Path $output 'Release/net8.0/KeelMatrix.BehaviorOracle.dll'
+        }
+        Assert-Condition (Test-Path -LiteralPath $engine -PathType Leaf) "Release engine was not produced for '$name'."
+        $hashes.Add((Get-FileHash -LiteralPath $engine -Algorithm SHA512).Hash.ToUpperInvariant())
+        $engines.Add($engine)
+    }
+
+    Assert-Condition ($hashes.Count -eq 2) 'Expected two clean clone engine hashes.'
+    Assert-Condition ($hashes[0] -ceq $hashes[1]) "Path-separated Release engine hashes differ: $($hashes[0]) and $($hashes[1])."
+    Write-Output "Reproducible engine build passed for $resolvedCommit. SHA-512: $($hashes[0])"
+    if ($KeepScratch) {
+        Write-Output "Clean clone engine A: $($engines[0])"
+        Write-Output "Clean clone engine B: $($engines[1])"
+    }
 }
 finally {
-    if (Test-Path -LiteralPath $scratch) {
-        Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue
+    if (-not $KeepScratch) {
+        foreach ($root in @($cloneWorkRoot, $buildWorkRoot) | Where-Object { $null -ne $_ }) {
+            if (Test-Path -LiteralPath $root) {
+                Remove-Item -LiteralPath $root -Recurse -Force
+            }
+        }
     }
 }
