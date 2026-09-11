@@ -111,6 +111,8 @@ try {
             '-p:Deterministic=true',
             '-p:DeterministicSourcePaths=true',
             '-p:IncludeSourceRevisionInInformationalVersion=false',
+            '-p:DebugType=none',
+            '-p:DebugSymbols=false',
             '-p:AssemblyVersion=0.1.0.0',
             '-p:FileVersion=0.1.0.0'
         )

@@ -453,6 +453,8 @@ try {
             deterministicSourcePaths = $true
             pathMap = '$(MSBuildProjectDirectory)=/_/'
             includeSourceRevisionInInformationalVersion = $false
+            debugType = 'none'
+            debugSymbols = $false
             sourceRevisionId = 'exact checked-out ref (PDB/SourceLink only)'
             repositoryCommit = 'exact checked-out ref (PDB/SourceLink only)'
         }
