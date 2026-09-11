@@ -127,10 +127,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 809.0,
+        "consoleMedianComparisonMilliseconds": 914.6,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 26089.0,
-        "repeatJsonProcessWallClockMilliseconds": 26688.0
+        "jsonProcessWallClockMilliseconds": 28413.0,
+        "repeatJsonProcessWallClockMilliseconds": 27984.9
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -189,10 +189,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 859.3,
+        "consoleMedianComparisonMilliseconds": 862.4,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 28691.9,
-        "repeatJsonProcessWallClockMilliseconds": 27899.9
+        "jsonProcessWallClockMilliseconds": 28857.9,
+        "repeatJsonProcessWallClockMilliseconds": 29416.9
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -258,10 +258,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 890.6,
+        "consoleMedianComparisonMilliseconds": 989.3,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 29645.9,
-        "repeatJsonProcessWallClockMilliseconds": 29794.6
+        "jsonProcessWallClockMilliseconds": 30061.6,
+        "repeatJsonProcessWallClockMilliseconds": 31335.7
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
