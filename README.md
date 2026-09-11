@@ -4,6 +4,29 @@ Public API compatibility can stay green while behavior changes underneath it. Be
 
 BehaviorOracle is evidence gathering, not a proof of arbitrary semantic equivalence and not an automatic breaking-change judgment.
 
+## Install, update, and uninstall
+
+Install the first public package from NuGet.org with:
+
+```powershell
+dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0
+```
+
+Update an existing installation with:
+
+```powershell
+dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.0
+```
+
+Remove it with:
+
+```powershell
+dotnet tool uninstall --global KeelMatrix.BehaviorOracle
+```
+
+The package is not published yet. Before publication, use the source and
+isolated package-smoke commands below to validate the current release candidate.
+
 ## Try the current unreleased build
 
 The first `0.1.0` package is not published yet. Run the current source from a clean clone with:
@@ -79,6 +102,12 @@ Exit codes are:
 - `2`: configuration, worker, loading, timeout, cancellation, or other execution failure prevented a trustworthy comparison.
 
 Use `--format json` for machine-readable output. Reports are schema version `1`, bounded, deterministic in ordering and serialization, and contain local evidence only. They can include API signatures, generated witnesses, observations, and minimized witnesses; treat retained reports as potentially sensitive.
+
+## Troubleshooting
+
+- Exit code `2` means configuration, loading, worker, timeout, or another execution failure prevented a trustworthy comparison. Check the paths, config version, dependencies, and host runtime first.
+- `UNSUPPORTED_API` and `NONDETERMINISTIC_INCONCLUSIVE` are conservative results, not evidence of equivalence. Review the API classification and run a focused scenario when the behavior is part of your contract.
+- A stable divergence should be rerun with its reported seed and minimized witness before deciding whether the change is intentional or breaking.
 
 ## Divergence interpretation
 
@@ -192,3 +221,7 @@ When a report contains a divergence:
 5. Add a focused regression test or an explicit normalizer only when the behavior is genuinely non-contractual.
 
 BehaviorOracle helps produce evidence for that review; it does not make the review decision for you.
+
+## License
+
+BehaviorOracle is available under the MIT License. See [`LICENSE`](LICENSE).
