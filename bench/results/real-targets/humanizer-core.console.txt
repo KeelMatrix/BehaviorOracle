@@ -7,5 +7,5 @@ Generated scenarios: 32
 Stable scenarios: 32
 Behavioral divergences: 0
 Unsupported/inconclusive scenarios: 0
-Median comparison time: 807.5 ms
+Median comparison time: 809.0 ms
 Seed: 12345
