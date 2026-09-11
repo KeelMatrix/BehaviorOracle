@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>8.0-recommended</AnalysisLevel>
@@ -15,4 +16,3 @@
     <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release' and '$(IsTestProject)' != 'true'">true</TreatWarningsAsErrors>
   </PropertyGroup>
 </Project>
-

@@ -10,6 +10,8 @@
 - `scripts/Verify-PackageContract.ps1` inspects the exact package and symbol archives and checks repeat-pack determinism.
 - `scripts/Invoke-PackageSmoke.ps1` installs the packed tool from an isolated local feed and exercises equivalent and planted-divergence comparisons.
 - `scripts/Invoke-DependencyAudit.ps1` provides the fail-closed dependency audit used by CI.
+- `scripts/Test-EngineReproducibility.ps1` builds two clean clones at different paths and asserts the engine assembly SHA-512 is identical.
+- `scripts/Invoke-ReleaseDryRun.ps1` validates the tag-to-version handoff and exercises the release build, pack, inspection, and exact-artifact assertions without publishing.
 - `action/` contains the composite GitHub Action wrapper and entrypoint.
 - `.github/workflows/ci.yml` defines repository CI: a Windows/Linux/macOS platform matrix, a required Ubuntu dependency-audit job, and a dependent Ubuntu package inspection and consumer-smoke job.
 - `.github/workflows/release.yml` defines the tag-driven package validation and publication workflow.
@@ -28,6 +30,8 @@ pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifa
 pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit (git rev-parse HEAD) -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
 pwsh -NoProfile -File .\scripts\Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln
 pwsh -NoProfile -File .\scripts\Test-DependencyAudit.ps1
+pwsh -NoProfile -File .\scripts\Test-EngineReproducibility.ps1
+pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0
 dotnet run --project src/KeelMatrix.BehaviorOracle -- --help
 dotnet run --project src/KeelMatrix.BehaviorOracle -- compare --baseline <dir> --candidate <dir> --config <file>
 ```

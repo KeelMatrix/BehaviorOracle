@@ -44,13 +44,13 @@ The full baseline/candidate package SHA-512 values are committed alongside these
 - Scenario budget: 32 per target
 - Confirmation runs: 3
 - Custom factories/generators: none for any target
-- Engine assembly SHA-512: recorded in `summary.json`
+- Engine assembly SHA-512: recorded in `summary.json`. The value is path-independent: the engine is built with `Deterministic`, `ContinuousIntegrationBuild`, and `DeterministicSourcePaths`, and `scripts/Test-EngineReproducibility.ps1` re-verifies the guarantee by building two clean clones at different paths and asserting identical engine hashes. `.gitattributes` enforces `eol=lf` so a fresh checkout always produces the LF source inputs the recorded hash binds to.
 
 | Target | Result | Discovered baseline/candidate | Matched | Supported pairs | Supported % | Exercised | Generated/stable | Divergences | Inconclusive | Unsupported APIs | Median comparison | Repeated JSON |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Humanizer.Core | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 392 / 414 | 392 | 25 | 6.38% | 25 | 32 / 32 | 0 | 0 | 367 | 807.5 ms | byte-identical |
-| Newtonsoft.Json | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 687 / 687 | 687 | 1 | 0.15% | 1 | 32 / 32 | 0 | 0 | 686 | 837.7 ms | byte-identical |
-| Npgsql | `NONDETERMINISTIC_INCONCLUSIVE` | 838 / 839 | 838 | 32 | 3.82% | 32 | 32 / 29 | 0 | 3 | 806 | 1,102.8 ms | byte-identical |
+| Humanizer.Core | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 392 / 414 | 392 | 25 | 6.38% | 25 | 32 / 32 | 0 | 0 | 367 | 1,273.3 ms | byte-identical |
+| Newtonsoft.Json | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 687 / 687 | 687 | 1 | 0.15% | 1 | 32 / 32 | 0 | 0 | 686 | 1,246.4 ms | byte-identical |
+| Npgsql | `NONDETERMINISTIC_INCONCLUSIVE` | 838 / 839 | 838 | 32 | 3.82% | 32 | 32 / 29 | 0 | 3 | 806 | 1,055.5 ms | byte-identical |
 
 The real targets exercised 58 supported API pairs and produced 93 stable scenarios without any mandatory custom generation. The deterministic transformation target supplied 25 automatically exercised APIs. The more complex serialization target was intentionally reported honestly at one supported API. Npgsql produced three inconclusive scenarios and no divergence; the raw diagnostics show conservative classification rather than forced execution through network/database state.
 
@@ -64,7 +64,7 @@ Real-target minimization is not applicable because no stable real divergence was
 | At least 70% recall on supported planted changes | **PASS** | Synthetic corpus: 35/35 expected divergence scenarios detected, 100% recall. |
 | No recurring false-positive class requiring domain-specific suppression | **PASS** | Synthetic corpus: 0 false divergence scenarios; hidden time/randomness/external-state cases were skipped. Real pairs produced 0 divergences. |
 | Useful minimized witnesses for most detected simple divergences | **PASS** | 35/35 synthetic divergence records include minimized witnesses; console output shows API, input, both observations, minimized witness, and seed. No real divergence was available to score. |
-| Bounded runtime suitable for ordinary CI | **PASS** | Synthetic median comparison: 822.9 ms for 80 scenarios; real-target per-scenario medians: 807.5–1,102.8 ms, with bounded end-to-end JSON runs of about 26.2–29.9 s per 32-scenario target. |
+| Bounded runtime suitable for ordinary CI | **PASS** | Synthetic median comparison: 822.9 ms for 80 scenarios; real-target per-scenario medians: 1,055.5–1,273.3 ms, with bounded end-to-end JSON runs of about 34.2–38.1 s per 32-scenario target. |
 | Conservative deterministic/nondeterministic classification | **PASS** | Synthetic unsupported state cases are skipped; Npgsql has 3 inconclusive scenarios and 0 reported divergences. Repeated JSON output is byte-identical for all three targets. |
 | Meaningful real-library value without mandatory custom factories/generators | **PASS (narrow domain)** | 58 real API pairs were exercised automatically and 93 scenarios were stable; 25 Humanizer APIs received deterministic comparison without custom setup. Coverage is intentionally low on the complex and out-of-domain targets and remains an explicit limitation. |
 

@@ -16,6 +16,8 @@ jobs:
     name: Resolve release version
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      version: ${{ steps.release-version.outputs.version }}
     steps:
       - name: Validate canonical release tag
         id: release-version
