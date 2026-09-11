@@ -149,6 +149,54 @@ dotnet tool install --global KeelMatrix.BehaviorOracle `
     $finalizedResult = Invoke-Contract -Repository $finalizedRoot -ExpectedCommit $finalizedCommit -ExpectedVersion '0.1.0'
     Assert-Test ($finalizedResult.ExitCode -eq 0) "A finalized, consistent multiline install example did not pass. Output: $($finalizedResult.Output)"
 
+    $equalsRoot = Join-Path $testRoot 'equals-install'
+    $equalsCommit = New-SyntheticRepository -Root $equalsRoot -PackageVersion '0.1.0' -InstallExample 'dotnet tool install --global KeelMatrix.BehaviorOracle --version=0.1.0' -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Equals-form install example.
+"@
+    $equalsResult = Invoke-Contract -Repository $equalsRoot -ExpectedCommit $equalsCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($equalsResult.ExitCode -eq 0) "An equals-form install example with the release version did not pass. Output: $($equalsResult.Output)"
+
+    $singleLineEqualsMismatchRoot = Join-Path $testRoot 'single-line-equals-install-mismatch'
+    $singleLineEqualsMismatchCommit = New-SyntheticRepository -Root $singleLineEqualsMismatchRoot -PackageVersion '0.1.0' -InstallExample 'dotnet tool install --global KeelMatrix.BehaviorOracle --version=0.2.0' -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Single-line equals-form mismatch.
+"@
+    $singleLineEqualsMismatchResult = Invoke-Contract -Repository $singleLineEqualsMismatchRoot -ExpectedCommit $singleLineEqualsMismatchCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($singleLineEqualsMismatchResult.ExitCode -ne 0) "A single-line equals-form install-example/version mismatch unexpectedly passed. Output: $($singleLineEqualsMismatchResult.Output)"
+
+    $continuationEqualsMismatchRoot = Join-Path $testRoot 'continuation-equals-install-mismatch'
+    $continuationEqualsMismatchCommit = New-SyntheticRepository -Root $continuationEqualsMismatchRoot -PackageVersion '0.1.0' -InstallExample @'
+dotnet tool install --global KeelMatrix.BehaviorOracle \
+  --version=0.2.0
+'@ -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Continuation-line equals-form mismatch.
+"@
+    $continuationEqualsMismatchResult = Invoke-Contract -Repository $continuationEqualsMismatchRoot -ExpectedCommit $continuationEqualsMismatchCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($continuationEqualsMismatchResult.ExitCode -ne 0) "A continuation-line equals-form install-example/version mismatch unexpectedly passed. Output: $($continuationEqualsMismatchResult.Output)"
+
     $multilineMismatchRoot = Join-Path $testRoot 'multiline-install-mismatch'
     $mismatchedInstallExample = @'
 dotnet tool install --global KeelMatrix.BehaviorOracle \

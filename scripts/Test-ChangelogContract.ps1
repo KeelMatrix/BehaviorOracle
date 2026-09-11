@@ -247,8 +247,8 @@ try {
             $_.FullName -notmatch '[\\/](?:\.git|bin|obj|artifacts)[\\/]'
         })
     $installVersionPatterns = @(
-        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*?--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)',
-        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*(?:(?:\\|`)[ \t]*)?\r?\n[ \t]*--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)'
+        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*?--version(?:\s+|=)(?<version>[0-9]+\.[0-9]+\.[0-9]+)',
+        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*(?:(?:\\|`)[ \t]*)?\r?\n[ \t]*--version(?:\s+|=)(?<version>[0-9]+\.[0-9]+\.[0-9]+)'
     )
     foreach ($documentationFile in $documentationFiles) {
         $documentationText = [IO.File]::ReadAllText($documentationFile.FullName)
