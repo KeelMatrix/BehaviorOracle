@@ -105,8 +105,8 @@ try {
         $buildProperties = @(
             '-p:Version=0.1.0',
             '-p:PackageVersion=0.1.0',
-            "-p:SourceRevisionId=$resolvedCommit",
-            "-p:RepositoryCommit=$resolvedCommit",
+            '-p:SourceRevisionId=',
+            '-p:RepositoryCommit=',
             '-p:ContinuousIntegrationBuild=true',
             '-p:Deterministic=true',
             '-p:DeterministicSourcePaths=true',

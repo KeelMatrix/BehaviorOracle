@@ -455,8 +455,9 @@ try {
             includeSourceRevisionInInformationalVersion = $false
             debugType = 'none'
             debugSymbols = $false
-            sourceRevisionId = 'exact checked-out ref (PDB/SourceLink only)'
-            repositoryCommit = 'exact checked-out ref (PDB/SourceLink only)'
+            sourceRevisionId = 'empty for the hash-only DLL build'
+            repositoryCommit = 'empty for the hash-only DLL build'
+            refSelection = 'exact full SHA passed to Test-ReproducibleEngine.ps1 -Commit'
         }
         timingContract = [ordered]@{
             version = 1
