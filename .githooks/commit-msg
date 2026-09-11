@@ -8,6 +8,16 @@ fi
 
 message_file=$1
 
+if ! command -v grep >/dev/null 2>&1; then
+  printf '%s\n' 'Commit message check could not run: grep is required but was not found in PATH.' >&2
+  exit 2
+fi
+
+if ! printf '%s\n' 'history-guard-probe' | LC_ALL=C grep -Eiq '^history-guard-probe$' >/dev/null 2>&1; then
+  printf '%s\n' 'Commit message check could not run: grep is required but could not be executed.' >&2
+  exit 2
+fi
+
 label_co_author=$(printf '\143\157\055\141\165\164\150\157\162\145\144\055\142\171')
 label_signed_off=$(printf '\163\151\147\156\145\144\055\157\146\146\055\142\171')
 label_reviewed=$(printf '\162\145\166\151\145\167\145\144\055\142\171')

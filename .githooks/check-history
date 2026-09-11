@@ -1,7 +1,26 @@
 #!/bin/sh
 set -eu
 
+require_command() {
+  required_command=$1
+  if ! command -v "$required_command" >/dev/null 2>&1; then
+    printf 'History check could not run: required command "%s" was not found in PATH.\n' \
+      "$required_command" >&2
+    exit 2
+  fi
+}
+
+require_command git
+require_command dirname
+require_command mktemp
+require_command rm
+
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ ! -f "$script_dir/commit-msg" ] || [ ! -x "$script_dir/commit-msg" ]; then
+  printf '%s\n' 'History check could not run: commit-msg helper is missing or not executable.' >&2
+  exit 2
+fi
+
 temporary_file=$(mktemp "${TMPDIR:-/tmp}/commit-history.XXXXXX")
 trap 'rm -f "$temporary_file"' EXIT HUP INT TERM
 
