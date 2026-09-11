@@ -457,7 +457,7 @@ try {
             debugSymbols = $false
             sourceRevisionId = 'empty for the hash-only DLL build'
             repositoryCommit = 'empty for the hash-only DLL build'
-            refSelection = 'exact full SHA passed to Test-ReproducibleEngine.ps1 -Commit'
+            refSelection = 'exact full SHA passed to Test-EngineReproducibility.ps1 -Commit'
         }
         timingContract = [ordered]@{
             version = 1
