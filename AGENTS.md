@@ -9,6 +9,8 @@
 - `docs/benchmark-report.md` records the synthetic benchmark contract and captured measurements.
 - `scripts/Verify-PackageContract.ps1` inspects the exact package and symbol archives and checks repeat-pack determinism.
 - `scripts/Invoke-PackageSmoke.ps1` installs the packed tool from an isolated local feed and exercises equivalent and planted-divergence comparisons.
+- `scripts/Test-ReproducibleEngine.ps1` builds two clean path-separated clones and asserts identical Release engine hashes.
+- `scripts/Invoke-ReleaseDryRun.ps1` validates the tag-version handoff and exercises the non-publishing release build, pack, inspection, and consumer path.
 - `scripts/Invoke-DependencyAudit.ps1` provides the fail-closed dependency audit used by CI.
 - `action/` contains the composite GitHub Action wrapper and entrypoint.
 - `.github/workflows/ci.yml` defines repository CI: a Windows/Linux/macOS platform matrix, a required Ubuntu dependency-audit job, and a dependent Ubuntu package inspection and consumer-smoke job.
@@ -26,6 +28,8 @@ pwsh -NoProfile -File .\action\Test-Action.ps1  # Windows only
 dotnet pack src/KeelMatrix.BehaviorOracle/KeelMatrix.BehaviorOracle.csproj --configuration Release --no-build --no-restore --include-symbols -p:SymbolPackageFormat=snupkg --output .\artifacts\packages
 pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit (git rev-parse HEAD)
 pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit (git rev-parse HEAD) -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
+pwsh -NoProfile -File .\scripts\Test-ReproducibleEngine.ps1
+pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0
 pwsh -NoProfile -File .\scripts\Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln
 pwsh -NoProfile -File .\scripts\Test-DependencyAudit.ps1
 dotnet run --project src/KeelMatrix.BehaviorOracle -- --help

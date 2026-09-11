@@ -12,8 +12,13 @@ Run from the repository root after restore and a Release build:
 $env:KEELMATRIX_NO_TELEMETRY = '1'
 dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config -p:NuGetAudit=false
 dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror
+pwsh -NoProfile -File .\scripts\Test-ReproducibleEngine.ps1
 pwsh -NoProfile -File .\bench\real-targets\Invoke-RealLibraryBenchmark.ps1
 ```
+
+## Engine provenance
+
+`summary.json` records `engineAssemblySha512` as the SHA-512 of the Release `KeelMatrix.BehaviorOracle.dll` used for the real-target run. The build enables deterministic source paths and maps each project root to `/_/`; the committed `scripts/Test-ReproducibleEngine.ps1` recipe checks out the exact commit into two separate clean paths with LF-normalized Git text and asserts identical engine hashes after Release builds with the same version and SourceLink commit inputs. The recorded hash is regenerated from a fresh run after that assertion passes, so it identifies the path-independent engine build for the committed source ref and build inputs.
 
 The script bounds each tool process at 300,000 ms and captures each stdout/stderr stream at 4 MiB. It records the runtime environment and tool assembly SHA-512 in [`results/real-targets/summary.json`](results/real-targets/summary.json). All raw bounded outputs are committed:
 
