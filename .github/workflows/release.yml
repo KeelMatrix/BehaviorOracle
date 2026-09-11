@@ -72,6 +72,16 @@ jobs:
             throw 'KEELMATRIX_NO_TELEMETRY must be set to 1 for release validation.'
           }
 
+      - name: Validate finalized changelog and version contract
+        shell: pwsh
+        run: >
+          pwsh -NoProfile -File scripts/Test-ChangelogContract.ps1
+          -RepositoryPath $env:GITHUB_WORKSPACE
+          -ChangelogPath CHANGELOG.md
+          -ExpectedVersion $env:RELEASE_VERSION
+          -ExpectedPackageVersion $env:RELEASE_VERSION
+          -ExpectedRepositoryCommit $env:GITHUB_SHA
+
       - name: Restore from repository NuGet.config
         run: dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config --no-cache --force -p:NuGetAudit=false
 

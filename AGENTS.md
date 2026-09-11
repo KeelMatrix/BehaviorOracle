@@ -30,6 +30,8 @@ pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifa
 pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit (git rev-parse HEAD) -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
 pwsh -NoProfile -File .\scripts\Test-EngineReproducibility.ps1
 pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0
+pwsh -NoProfile -File .\scripts\Test-ChangelogContract.ps1 -ExpectedVersion 0.1.0 -ExpectedPackageVersion 0.1.0 -ExpectedRepositoryCommit (git rev-parse HEAD)
+pwsh -NoProfile -File .\scripts\Test-ChangelogContractContract.ps1
 pwsh -NoProfile -File .\scripts\Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln
 pwsh -NoProfile -File .\scripts\Test-DependencyAudit.ps1
 dotnet run --project src/KeelMatrix.BehaviorOracle -- --help
@@ -37,6 +39,8 @@ dotnet run --project src/KeelMatrix.BehaviorOracle -- compare --baseline <dir> -
 ```
 
 The benchmark intentionally reports its planted divergence with exit code `1`; it is enabled only by `bench/Run-Benchmark.ps1` and is not a shipped CLI command. The package smoke expects an equivalent comparison to exit `0` and a planted divergence to exit `1`. `action/Test-Action.ps1` validates the Action wrapper on Windows PowerShell/.NET 8, including path handling, failure propagation, and cleanup. CI runs the full test, format, benchmark, dependency-audit, and telemetry-suppression checks on `windows-latest`, `ubuntu-latest`, and `macos-latest`; the Windows matrix leg also runs the Action validation. A separate Ubuntu job fails closed when advisory data is unavailable, and the dependent Ubuntu `package` job inspects the exact archives and runs the isolated consumer smoke.
+
+Before creating a release tag, finalize the target entry in `CHANGELOG.md`, then run `scripts/Test-ChangelogContract.ps1` against the exact clean commit with the target release, package, and commit values. The tag-triggered release workflow runs the same contract again before restore, build, pack, or publication. `scripts/Test-ChangelogContractContract.ps1` exercises the planned, finalized, mismatched-version, and exact-commit cases using temporary Git repositories.
 
 ## Invariants
 

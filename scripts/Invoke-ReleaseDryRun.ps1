@@ -97,6 +97,16 @@ try {
     $commit = Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'rev-parse', 'HEAD')
     Assert-Condition ($commit -match '^[0-9a-fA-F]{40}$') "Commit '$commit' is not a full Git SHA."
 
+    $changelogContract = Join-Path $repository 'scripts/Test-ChangelogContract.ps1'
+    Invoke-Checked -File 'pwsh' -Arguments @(
+        '-NoProfile', '-File', $changelogContract,
+        '-RepositoryPath', $repository,
+        '-ChangelogPath', (Join-Path $repository 'CHANGELOG.md'),
+        '-ExpectedVersion', $env:RELEASE_VERSION,
+        '-ExpectedPackageVersion', $env:RELEASE_VERSION,
+        '-ExpectedRepositoryCommit', $commit
+    )
+
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
     $packageDirectory = Join-Path $workRoot 'packages'
     New-Item -ItemType Directory -Path $packageDirectory -Force | Out-Null

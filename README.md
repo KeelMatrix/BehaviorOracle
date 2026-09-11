@@ -44,7 +44,7 @@ The repository's package contract is checked against the actual `.nupkg` and `.s
 
 The package-consumer smoke uses fresh `NUGET_PACKAGES`, HTTP-cache, plugin-cache, scratch, and .NET CLI home directories plus a generated source-mapped NuGet configuration. `KeelMatrix.BehaviorOracle` resolves only from the local candidate feed; its runtime dependency resolves from NuGet.org. It verifies the installed candidate package hash before exercising equivalent and planted-divergence comparisons.
 
-Maintainers can validate the first-release path without publishing by running `pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0`. The dry-run checks the workflow's version-output handoff, builds and packs the exact version, inspects both archives, runs the isolated consumer smoke, and explicitly skips publication.
+After finalizing the target `CHANGELOG.md` entry, maintainers can validate the first-release path without publishing by running `pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0`. The dry-run checks the exact-commit changelog/version contract, the workflow's version-output handoff, builds and packs the exact version, inspects both archives, runs the isolated consumer smoke, and explicitly skips publication. A planned or unreleased changelog entry is expected to fail this gate until release preparation is complete.
 
 The pinned real-library evidence under `bench/real-targets.md` uses a documented deterministic Release build contract and a two-clean-clone engine-hash check. Its report JSON, counts, classifications, signatures, witnesses, and hashes are stable evidence; elapsed timings and host-environment snapshots are intentionally volatile context and are not compared for exact equality.
 

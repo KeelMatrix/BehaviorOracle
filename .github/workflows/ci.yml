@@ -35,6 +35,10 @@ jobs:
         shell: bash
         run: sh .githooks/check-history
 
+      - name: Test changelog and version publication contract
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Test-ChangelogContractContract.ps1
+
   platform:
     name: Platform / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
