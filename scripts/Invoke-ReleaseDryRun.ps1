@@ -134,8 +134,8 @@ try {
     )
 
     $expectedNames = @(
-        "KeelMatrix.BehaviorOracle.$env:RELEASE_VERSION.nupkg",
-        "KeelMatrix.BehaviorOracle.$env:RELEASE_VERSION.snupkg"
+        "KeelMatrix.BehaviorOracle.$version.nupkg",
+        "KeelMatrix.BehaviorOracle.$version.snupkg"
     ) | Sort-Object
     $actualNames = @(Get-ChildItem -LiteralPath $packageDirectory -File | Select-Object -ExpandProperty Name | Sort-Object)
     Assert-Condition (@(Compare-Object -ReferenceObject $expectedNames -DifferenceObject $actualNames).Count -eq 0) "Release dry-run produced an unexpected artifact set. Expected: $($expectedNames -join ', '). Actual: $($actualNames -join ', ')."
