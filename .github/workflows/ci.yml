@@ -31,6 +31,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File scripts/Verify-CommitMessages.ps1
 
+      - name: Validate standardized history hygiene
+        shell: bash
+        run: sh .githooks/check-history
+
   platform:
     name: Platform / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
