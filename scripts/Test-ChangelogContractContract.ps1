@@ -55,7 +55,8 @@ function New-SyntheticRepository {
     param(
         [Parameter(Mandatory = $true)][string]$Root,
         [Parameter(Mandatory = $true)][string]$Changelog,
-        [Parameter(Mandatory = $true)][string]$PackageVersion
+        [Parameter(Mandatory = $true)][string]$PackageVersion,
+        [string]$InstallExample = ''
     )
 
     New-Item -ItemType Directory -Path $Root -Force | Out-Null
@@ -86,6 +87,10 @@ function New-SyntheticRepository {
   </ItemGroup>
 </Project>
 "@ -Encoding utf8
+    if ([string]::IsNullOrWhiteSpace($InstallExample)) {
+        $InstallExample = "dotnet tool install --global KeelMatrix.BehaviorOracle --version $PackageVersion"
+    }
+    Set-Content -LiteralPath (Join-Path $Root 'README.md') -Value $InstallExample -Encoding utf8
     Invoke-GitChecked -Repository $Root -Arguments @('add', '--', '.')
     Invoke-GitChecked -Repository $Root -Arguments @('commit', '--quiet', '-m', 'Create synthetic release fixture')
     return ((& git -C $Root rev-parse HEAD).Trim())
@@ -114,9 +119,9 @@ try {
     $nestedCommit = New-SyntheticRepository -Root $nestedRoot -PackageVersion '0.1.0' -Changelog @"
 # Changelog
 
-## [Unreleased]
+# [Unreleased]
 
-### [0.1.0] - $releaseDate
+## [0.1.0] - $releaseDate
 
 ### Added
 
@@ -126,7 +131,11 @@ try {
     Assert-Test ($nestedResult.ExitCode -ne 0) "A release entry nested under Unreleased unexpectedly passed the publication gate. Output: $($nestedResult.Output)"
 
     $finalizedRoot = Join-Path $testRoot 'finalized'
-    $finalizedCommit = New-SyntheticRepository -Root $finalizedRoot -PackageVersion '0.1.0' -Changelog @"
+    $consistentInstallExample = @'
+dotnet tool install --global KeelMatrix.BehaviorOracle `
+  --version 0.1.0
+'@
+    $finalizedCommit = New-SyntheticRepository -Root $finalizedRoot -PackageVersion '0.1.0' -InstallExample $consistentInstallExample -Changelog @"
 # Changelog
 
 ## [Unreleased]
@@ -138,7 +147,26 @@ try {
 - Finalized release.
 "@
     $finalizedResult = Invoke-Contract -Repository $finalizedRoot -ExpectedCommit $finalizedCommit -ExpectedVersion '0.1.0'
-    Assert-Test ($finalizedResult.ExitCode -eq 0) "A finalized, consistent changelog entry did not pass. Output: $($finalizedResult.Output)"
+    Assert-Test ($finalizedResult.ExitCode -eq 0) "A finalized, consistent multiline install example did not pass. Output: $($finalizedResult.Output)"
+
+    $multilineMismatchRoot = Join-Path $testRoot 'multiline-install-mismatch'
+    $mismatchedInstallExample = @'
+dotnet tool install --global KeelMatrix.BehaviorOracle \
+  --version 0.2.0
+'@
+    $multilineMismatchCommit = New-SyntheticRepository -Root $multilineMismatchRoot -PackageVersion '0.1.0' -InstallExample $mismatchedInstallExample -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Mismatched multiline install example.
+"@
+    $multilineMismatchResult = Invoke-Contract -Repository $multilineMismatchRoot -ExpectedCommit $multilineMismatchCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($multilineMismatchResult.ExitCode -ne 0) "A multiline install-example/version mismatch unexpectedly passed. Output: $($multilineMismatchResult.Output)"
 
     $mismatchRoot = Join-Path $testRoot 'mismatch'
     $mismatchCommit = New-SyntheticRepository -Root $mismatchRoot -PackageVersion '0.2.0' -Changelog @"

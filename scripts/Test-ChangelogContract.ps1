@@ -246,10 +246,16 @@ try {
             $_.Extension -ieq '.md' -and
             $_.FullName -notmatch '[\\/](?:\.git|bin|obj|artifacts)[\\/]'
         })
+    $installVersionPatterns = @(
+        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*?--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)',
+        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*(?:(?:\\|`)[ \t]*)?\r?\n[ \t]*--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)'
+    )
     foreach ($documentationFile in $documentationFiles) {
-        foreach ($line in @(Get-Content -LiteralPath $documentationFile.FullName -ErrorAction Stop)) {
-            if ($line -match '(?i)dotnet\s+(?:tool\s+install|add\s+package)' -and $line -match '(?i)--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)') {
-                Assert-Contract ($matches['version'] -ceq $ExpectedVersion) "Install example in '$($documentationFile.FullName)' uses version '$($matches['version'])' instead of release/tag version '$ExpectedVersion'."
+        $documentationText = [IO.File]::ReadAllText($documentationFile.FullName)
+        foreach ($installVersionPattern in $installVersionPatterns) {
+            foreach ($match in [Text.RegularExpressions.Regex]::Matches($documentationText, $installVersionPattern)) {
+                $installVersion = $match.Groups['version'].Value
+                Assert-Contract ($installVersion -ceq $ExpectedVersion) "Install example in '$($documentationFile.FullName)' uses version '$installVersion' instead of release/tag version '$ExpectedVersion'."
             }
         }
     }
