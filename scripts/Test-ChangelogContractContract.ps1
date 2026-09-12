@@ -56,14 +56,21 @@ function New-SyntheticRepository {
         [Parameter(Mandatory = $true)][string]$Root,
         [Parameter(Mandatory = $true)][string]$Changelog,
         [Parameter(Mandatory = $true)][string]$PackageVersion,
-        [string]$InstallExample = ''
+        [string]$InstallExample = '',
+        [switch]$CrLfChangelog
     )
 
     New-Item -ItemType Directory -Path $Root -Force | Out-Null
     Invoke-GitChecked -Repository $Root -Arguments @('init', '--quiet')
     Invoke-GitChecked -Repository $Root -Arguments @('config', 'user.name', 'KeelMatrix')
     Invoke-GitChecked -Repository $Root -Arguments @('config', 'user.email', 'dev@keelmatrix.example')
-    Set-Content -LiteralPath (Join-Path $Root 'CHANGELOG.md') -Value $Changelog -Encoding utf8
+    $changelogText = if ($CrLfChangelog) {
+        $Changelog.Replace("`r`n", "`n").Replace("`n", "`r`n")
+    }
+    else {
+        $Changelog
+    }
+    [IO.File]::WriteAllText((Join-Path $Root 'CHANGELOG.md'), $changelogText, [Text.UTF8Encoding]::new($false))
     Set-Content -LiteralPath (Join-Path $Root 'Directory.Build.props') -Value @"
 <Project>
   <PropertyGroup>
@@ -148,6 +155,71 @@ dotnet tool install --global KeelMatrix.BehaviorOracle `
 "@
     $finalizedResult = Invoke-Contract -Repository $finalizedRoot -ExpectedCommit $finalizedCommit -ExpectedVersion '0.1.0'
     Assert-Test ($finalizedResult.ExitCode -eq 0) "A finalized, consistent multiline install example did not pass. Output: $($finalizedResult.Output)"
+
+    $equalsInstallRoot = Join-Path $testRoot 'equals-install'
+    $equalsInstallExample = 'dotnet tool install --global KeelMatrix.BehaviorOracle --version=0.1.0'
+    $equalsInstallCommit = New-SyntheticRepository -Root $equalsInstallRoot -PackageVersion '0.1.0' -InstallExample $equalsInstallExample -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Equals-form install example.
+"@
+    $equalsInstallResult = Invoke-Contract -Repository $equalsInstallRoot -ExpectedCommit $equalsInstallCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($equalsInstallResult.ExitCode -eq 0) "An equals-form install example with the release version did not pass. Output: $($equalsInstallResult.Output)"
+
+    foreach ($quote in @([char]34, [char]39, [char]96)) {
+        $quotedVersion = [string]$quote + '0.2.0' + [string]$quote
+        $quotedMismatchRoot = Join-Path $testRoot ("quoted-install-mismatch-" + [int]$quote)
+        $quotedMismatchExample = "dotnet tool install --global KeelMatrix.BehaviorOracle --version $quotedVersion"
+        $quotedMismatchCommit = New-SyntheticRepository -Root $quotedMismatchRoot -PackageVersion '0.1.0' -InstallExample $quotedMismatchExample -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Quoted mismatched install example.
+"@
+        $quotedMismatchResult = Invoke-Contract -Repository $quotedMismatchRoot -ExpectedCommit $quotedMismatchCommit -ExpectedVersion '0.1.0'
+        Assert-Test ($quotedMismatchResult.ExitCode -ne 0) "A quoted install-example/version mismatch passed the publication gate."
+    }
+
+    $crlfFinalizedRoot = Join-Path $testRoot 'crlf-finalized'
+    $crlfFinalizedCommit = New-SyntheticRepository -Root $crlfFinalizedRoot -PackageVersion '0.1.0' -CrLfChangelog -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - $releaseDate
+
+### Added
+
+- Finalized CRLF release.
+"@
+    $crlfFinalizedResult = Invoke-Contract -Repository $crlfFinalizedRoot -ExpectedCommit $crlfFinalizedCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($crlfFinalizedResult.ExitCode -eq 0) "A finalized CRLF changelog was rejected. Output: $($crlfFinalizedResult.Output)"
+
+    $crlfPlannedRoot = Join-Path $testRoot 'crlf-planned'
+    $crlfPlannedCommit = New-SyntheticRepository -Root $crlfPlannedRoot -PackageVersion '0.1.0' -CrLfChangelog -Changelog @"
+# Changelog
+
+## [Unreleased]
+
+## [0.1.0] - Planned (not yet published)
+
+### Added
+
+- Planned CRLF release.
+"@
+    $crlfPlannedResult = Invoke-Contract -Repository $crlfPlannedRoot -ExpectedCommit $crlfPlannedCommit -ExpectedVersion '0.1.0'
+    Assert-Test ($crlfPlannedResult.ExitCode -ne 0) "A planned CRLF changelog passed the publication gate."
 
     $multilineMismatchRoot = Join-Path $testRoot 'multiline-install-mismatch'
     $mismatchedInstallExample = @'

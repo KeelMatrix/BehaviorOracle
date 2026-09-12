@@ -68,6 +68,21 @@ function Resolve-VersionValue {
     throw "Unable to resolve package version declaration '$normalized' in $Source."
 }
 
+function Normalize-InstallVersion {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $normalized = $Value.Trim()
+    if ($normalized.Length -ge 2) {
+        $openingQuote = $normalized[0]
+        $closingQuote = $normalized[$normalized.Length - 1]
+        if ($openingQuote -in @([char]34, [char]39, [char]96) -and $closingQuote -eq $openingQuote) {
+            $normalized = $normalized.Substring(1, $normalized.Length - 2).Trim()
+        }
+    }
+
+    return $normalized
+}
+
 function Get-ProjectMetadataFiles {
     param([Parameter(Mandatory = $true)][string]$Repository)
 
@@ -123,7 +138,7 @@ try {
     [void](Invoke-Git -Repository $repository -Arguments @('ls-files', '--error-unmatch', '--', $relativeChangelog))
 
     $changelogText = Get-Content -LiteralPath $changelog -Raw -ErrorAction Stop
-    $headingMatches = [regex]::Matches($changelogText, '(?m)^(?<hash>#{1,6})[ \t]+(?<title>[^\r\n]+?)[ \t]*$')
+    $headingMatches = [regex]::Matches($changelogText, '(?m)^(?<hash>#{1,6})[ \t]+(?<title>[^\r\n]+?)[ \t]*\r?$')
     $headings = [Collections.Generic.List[object]]::new()
     foreach ($headingMatch in $headingMatches) {
         $headings.Add([pscustomobject]@{
@@ -247,14 +262,14 @@ try {
             $_.FullName -notmatch '[\\/](?:\.git|bin|obj|artifacts)[\\/]'
         })
     $installVersionPatterns = @(
-        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*?--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)',
-        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*(?:(?:\\|`)[ \t]*)?\r?\n[ \t]*--version\s+(?<version>[0-9]+\.[0-9]+\.[0-9]+)'
+        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*?--version(?:\s+|=)(?<version>"[^"\r\n]*"|''[^''\r\n]*''|`[^`\r\n]*`|[^\s"''`<>]+)',
+        '(?im)\bdotnet\s+(?:tool\s+install|add\s+package)\b[^\r\n]*(?:(?:\\|`)[ \t]*)?\r?\n[ \t]*--version(?:\s+|=)(?<version>"[^"\r\n]*"|''[^''\r\n]*''|`[^`\r\n]*`|[^\s"''`<>]+)'
     )
     foreach ($documentationFile in $documentationFiles) {
         $documentationText = [IO.File]::ReadAllText($documentationFile.FullName)
         foreach ($installVersionPattern in $installVersionPatterns) {
             foreach ($match in [Text.RegularExpressions.Regex]::Matches($documentationText, $installVersionPattern)) {
-                $installVersion = $match.Groups['version'].Value
+                $installVersion = Normalize-InstallVersion $match.Groups['version'].Value
                 Assert-Contract ($installVersion -ceq $ExpectedVersion) "Install example in '$($documentationFile.FullName)' uses version '$installVersion' instead of release/tag version '$ExpectedVersion'."
             }
         }
