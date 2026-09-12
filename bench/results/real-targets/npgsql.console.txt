@@ -1,11 +1,11 @@
-NONDETERMINISTIC_INCONCLUSIVE
+EQUIVALENT WITHIN TESTED DOMAIN
 Matched callable APIs: 838
-Eligible supported API pairs: 32
-APIs actually exercised: 32
-Unsupported APIs: 806
+Eligible supported API pairs: 4
+APIs actually exercised: 4
+Unsupported APIs: 834
 Generated scenarios: 32
-Stable scenarios: 29
+Stable scenarios: 32
 Behavioral divergences: 0
-Unsupported/inconclusive scenarios: 3
-Median comparison time: 989.3 ms
+Unsupported/inconclusive scenarios: 0
+Median comparison time: 986.8 ms
 Seed: 12345

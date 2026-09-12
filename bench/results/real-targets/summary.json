@@ -7,7 +7,7 @@
     "scenarioBudget": 32,
     "confirmationRuns": 3
   },
-  "engineAssemblySha512": "C9467E1AA19234DDB7AE3DD779F19D38FFA8E31A1BF3013138A1D0BED48E79A262B290459BF231E3752B95B69C62BDF616144CA4EFA991FAC49F81C70CF55B6B",
+  "engineAssemblySha512": "42FFEE04AFC051268E358470ABA27C7CD67930C18238691FFAB2D91D710E83E7DDB27D897B9D0C74EF5DB4ABAA4A46682A1AF03EDB63BDA5B1D046E82F5CF1EB",
   "engineBuildContract": {
     "configuration": "Release",
     "targetFramework": "net8.0",
@@ -127,10 +127,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 914.6,
+        "consoleMedianComparisonMilliseconds": 920.7,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 28413.0,
-        "repeatJsonProcessWallClockMilliseconds": 27984.9
+        "jsonProcessWallClockMilliseconds": 28822.4,
+        "repeatJsonProcessWallClockMilliseconds": 28084.0
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -166,7 +166,7 @@
       "dependencies": [],
       "reportPath": "bench/results/real-targets/newtonsoft-json.json",
       "consolePath": "bench/results/real-targets/newtonsoft-json.console.txt",
-      "reportSha512": "8A48AE73D3AEF09327954765EAA0ED5D3C4D13EE5600783788BA2250E1551BA0BD3F58DCA97477F921B77257CDEBE5EBDFDC80A3C5B8EE7AB6BFC1DE3629562B",
+      "reportSha512": "6417725F324FC34412B7431BB431631C272DE3E3A4DE6DE81323E7EF587097EBB844B2E0543E512B66CCBFAF9F373AE74D10FAD17D13A26FEA0E49D992A9006C",
       "report": {
         "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
         "trustworthy": true,
@@ -189,10 +189,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 862.4,
+        "consoleMedianComparisonMilliseconds": 886.2,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 28857.9,
-        "repeatJsonProcessWallClockMilliseconds": 29416.9
+        "jsonProcessWallClockMilliseconds": 29912.1,
+        "repeatJsonProcessWallClockMilliseconds": 32293.6
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -235,33 +235,33 @@
       ],
       "reportPath": "bench/results/real-targets/npgsql.json",
       "consolePath": "bench/results/real-targets/npgsql.console.txt",
-      "reportSha512": "49B3B268EDAA5E93A6F2483DCADBD34D5EBD29FC765946086C44F75BB4873E193E943ED4F77B80C2FF796F4FA1B68D3A659118E940CA6D493767648E8548F420",
+      "reportSha512": "1FC62CC4249E40F40F7A55A99E72200490BE619584D14DE4475FD383C9E2B0B1B90AECE33DB6D2830965A8CFCB55E0497D9DACD369750784130BDAD859F6AE06",
       "report": {
-        "resultState": "NONDETERMINISTIC_INCONCLUSIVE",
+        "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
         "trustworthy": true,
         "discoveredBaselineApis": 838,
         "discoveredCandidateApis": 839,
         "matchedCallableApis": 838,
-        "eligibleSupportedApiPairs": 32,
-        "supportedApiPercentage": 3.8186157517899764,
-        "exercisedApiCount": 32,
+        "eligibleSupportedApiPairs": 4,
+        "supportedApiPercentage": 0.47732696897374705,
+        "exercisedApiCount": 4,
         "generatedScenarios": 32,
-        "stableScenarios": 29,
+        "stableScenarios": 32,
         "divergenceCount": 0,
-        "inconclusiveCount": 3,
+        "inconclusiveCount": 0,
         "unsupportedCount": 0,
-        "unsupportedApiCount": 806,
-        "unsupportedOrInconclusiveRate": 0.09375,
+        "unsupportedApiCount": 834,
+        "unsupportedOrInconclusiveRate": 0,
         "executionFailureCount": 0
       },
       "groundTruth": "not-available-for-published-version-pair",
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 989.3,
+        "consoleMedianComparisonMilliseconds": 986.8,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 30061.6,
-        "repeatJsonProcessWallClockMilliseconds": 31335.7
+        "jsonProcessWallClockMilliseconds": 36587.9,
+        "repeatJsonProcessWallClockMilliseconds": 32314.8
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
