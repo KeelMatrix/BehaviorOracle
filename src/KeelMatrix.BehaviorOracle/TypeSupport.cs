@@ -56,7 +56,50 @@ internal static class TypeSupport
     public static bool IsSupported(Type type) => UnsupportedReason(type) is null;
 
     public static string? UnsupportedReason(MethodInfo method) =>
-        AnalyzeMethod(method, new HashSet<MethodBase>(), depth: 0);
+        AnalyzeCallable(method);
+
+    private static string? AnalyzeCallable(MethodInfo method)
+    {
+        var visitingMethods = new HashSet<MethodBase>();
+        var reason = AnalyzeMethod(method, visitingMethods, depth: 0);
+        if (reason is not null)
+        {
+            return reason;
+        }
+
+        if (!method.IsStatic)
+        {
+            reason = AnalyzeConstruction(method.DeclaringType!, new HashSet<Type>(), visitingMethods, depth: 0);
+            if (reason is not null)
+            {
+                return $"receiver construction is unsupported: {reason}";
+            }
+
+            reason = AnalyzeObservation(method.DeclaringType!, new HashSet<Type>(), visitingMethods, depth: 0);
+            if (reason is not null)
+            {
+                return $"receiver observation is unsupported: {reason}";
+            }
+        }
+
+        foreach (var parameter in method.GetParameters())
+        {
+            reason = AnalyzeConstruction(parameter.ParameterType, new HashSet<Type>(), visitingMethods, depth: 0);
+            if (reason is not null)
+            {
+                return $"input construction is unsupported: {reason}";
+            }
+
+            reason = AnalyzeObservation(parameter.ParameterType, new HashSet<Type>(), visitingMethods, depth: 0);
+            if (reason is not null)
+            {
+                return $"input observation is unsupported: {reason}";
+            }
+        }
+
+        reason = AnalyzeObservation(method.ReturnType, new HashSet<Type>(), visitingMethods, depth: 0);
+        return reason is null ? null : $"return observation is unsupported: {reason}";
+    }
 
     private static string? AnalyzeMethod(MethodBase method, HashSet<MethodBase> visiting, int depth)
     {
@@ -180,7 +223,7 @@ internal static class TypeSupport
                 }
             }
 
-            return null;
+            return AnalyzeStateMachine(method, visiting, depth);
         }
         finally
         {
@@ -606,6 +649,356 @@ internal static class TypeSupport
         }
 
         return false;
+    }
+
+    private static string? AnalyzeStateMachine(MethodBase method, HashSet<MethodBase> visiting, int depth)
+    {
+        var stateMachineType = method.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType ??
+            method.GetCustomAttribute<IteratorStateMachineAttribute>()?.StateMachineType;
+        if (stateMachineType is null)
+        {
+            return null;
+        }
+
+        var moveNext = stateMachineType.GetMethod(
+            "MoveNext",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        return moveNext is null
+            ? "compiler-generated state-machine body cannot be inspected"
+            : AnalyzeMethod(moveNext, visiting, depth + 1);
+    }
+
+    private static string? AnalyzeConstruction(
+        Type type,
+        HashSet<Type> visitingTypes,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        if (depth > 8)
+        {
+            return "input construction dependency exceeded the analysis depth limit";
+        }
+
+        if (Nullable.GetUnderlyingType(type) is Type nullableType)
+        {
+            return AnalyzeConstruction(nullableType, visitingTypes, visitingMethods, depth + 1);
+        }
+
+        if (type.IsByRef || type.IsPointer || type.IsFunctionPointer || type == typeof(void))
+        {
+            return null;
+        }
+
+        if (type.IsEnum || SimpleTypes.Contains(type))
+        {
+            return null;
+        }
+
+        if (IsTaskLike(type))
+        {
+            return AnalyzeObservation(type.GetGenericArguments()[0], visitingTypes, visitingMethods, depth + 1);
+        }
+
+        if (type.IsArray)
+        {
+            return AnalyzeConstruction(type.GetElementType()!, visitingTypes, visitingMethods, depth + 1);
+        }
+
+        if (TryGetCollectionShape(type, out var elementType, out var keyType, out var valueType))
+        {
+            var reason = keyType is null
+                ? AnalyzeConstruction(elementType!, visitingTypes, visitingMethods, depth + 1)
+                : AnalyzeConstruction(keyType, visitingTypes, visitingMethods, depth + 1) ??
+                  AnalyzeConstruction(valueType!, visitingTypes, visitingMethods, depth + 1);
+            if (reason is not null)
+            {
+                return reason;
+            }
+
+            if (IsBuiltInCollection(type))
+            {
+                return null;
+            }
+
+            reason = AnalyzePublicParameterlessConstructor(type, visitingMethods, depth);
+            return reason ?? AnalyzeEnumerableExecution(type, visitingMethods, depth);
+        }
+
+        var basicReason = UnsupportedShapeReason(type);
+        if (basicReason is not null)
+        {
+            return basicReason;
+        }
+
+        if (!visitingTypes.Add(type))
+        {
+            return "cyclic input construction is outside the bounded probe domain";
+        }
+
+        try
+        {
+            var reason = AnalyzePublicParameterlessConstructor(type, visitingMethods, depth);
+            if (reason is not null)
+            {
+                return reason;
+            }
+
+            foreach (var member in WritableMembers(type))
+            {
+                reason = AnalyzeMemberBody(member, visitingMethods, depth);
+                if (reason is not null)
+                {
+                    return $"member {member.Name} body is unsupported: {reason}";
+                }
+
+                reason = AnalyzeConstruction(member.MemberType, visitingTypes, visitingMethods, depth + 1);
+                if (reason is not null)
+                {
+                    return $"member {member.Name} is unsupported: {reason}";
+                }
+            }
+
+            return null;
+        }
+        finally
+        {
+            visitingTypes.Remove(type);
+        }
+    }
+
+    private static string? AnalyzeObservation(
+        Type type,
+        HashSet<Type> visitingTypes,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        if (depth > 8)
+        {
+            return "return observation dependency exceeded the analysis depth limit";
+        }
+
+        if (Nullable.GetUnderlyingType(type) is Type nullableType)
+        {
+            return AnalyzeObservation(nullableType, visitingTypes, visitingMethods, depth + 1);
+        }
+
+        if (type.IsByRef || type.IsPointer || type.IsFunctionPointer || type == typeof(void) ||
+            type.IsEnum || SimpleTypes.Contains(type))
+        {
+            return null;
+        }
+
+        if (IsTaskLike(type))
+        {
+            return AnalyzeObservation(type.GetGenericArguments()[0], visitingTypes, visitingMethods, depth + 1);
+        }
+
+        if (type.IsArray)
+        {
+            return AnalyzeObservation(type.GetElementType()!, visitingTypes, visitingMethods, depth + 1);
+        }
+
+        if (TryGetCollectionShape(type, out var elementType, out var keyType, out var valueType))
+        {
+            var reason = keyType is null
+                ? AnalyzeObservation(elementType!, visitingTypes, visitingMethods, depth + 1)
+                : AnalyzeObservation(keyType, visitingTypes, visitingMethods, depth + 1) ??
+                  AnalyzeObservation(valueType!, visitingTypes, visitingMethods, depth + 1);
+            if (reason is not null)
+            {
+                return reason;
+            }
+
+            return IsBuiltInCollection(type)
+                ? null
+                : AnalyzeEnumerableExecution(type, visitingMethods, depth);
+        }
+
+        var basicReason = UnsupportedShapeReason(type);
+        if (basicReason is not null)
+        {
+            return basicReason;
+        }
+
+        if (!visitingTypes.Add(type))
+        {
+            return "cyclic return observation is outside the bounded probe domain";
+        }
+
+        try
+        {
+            foreach (var member in ReadableMembers(type))
+            {
+                var reason = AnalyzeMemberBody(member, visitingMethods, depth);
+                if (reason is not null)
+                {
+                    return $"member {member.Name} body is unsupported: {reason}";
+                }
+
+                reason = AnalyzeObservation(member.MemberType, visitingTypes, visitingMethods, depth + 1);
+                if (reason is not null)
+                {
+                    return $"member {member.Name} is unsupported: {reason}";
+                }
+            }
+
+            return null;
+        }
+        finally
+        {
+            visitingTypes.Remove(type);
+        }
+    }
+
+    private static string? AnalyzePublicParameterlessConstructor(
+        Type type,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        var constructor = type.GetConstructor(
+            BindingFlags.Public | BindingFlags.Instance,
+            binder: null,
+            Type.EmptyTypes,
+            modifiers: null);
+        return constructor is null
+            ? "no deterministic public construction path exists"
+            : AnalyzeMethod(constructor, visitingMethods, depth + 1);
+    }
+
+    private static string? AnalyzeMemberBody(
+        WritableMember member,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        return member.Member switch
+        {
+            PropertyInfo property when property.SetMethod is MethodInfo setter =>
+                AnalyzeMethod(setter, visitingMethods, depth + 1),
+            _ => null
+        };
+    }
+
+    private static string? AnalyzeMemberBody(
+        ReadableMember member,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        return member.Member switch
+        {
+            PropertyInfo property when property.GetMethod is MethodInfo getter =>
+                AnalyzeMethod(getter, visitingMethods, depth + 1),
+            _ => null
+        };
+    }
+
+    private static string? AnalyzeEnumerableExecution(
+        Type type,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        foreach (var interfaceType in type.GetInterfaces()
+                     .Where(static candidate =>
+                         candidate == typeof(IEnumerable) ||
+                         (candidate.IsGenericType && candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>))))
+        {
+            var map = type.GetInterfaceMap(interfaceType);
+            foreach (var implementation in map.TargetMethods)
+            {
+                var reason = AnalyzeMethod(implementation, visitingMethods, depth + 1);
+                if (reason is not null)
+                {
+                    return reason;
+                }
+            }
+        }
+
+        foreach (var enumeratorType in UserEnumeratorTypes(type.Assembly))
+        {
+            foreach (var implementation in EnumeratorMethods(enumeratorType))
+            {
+                var reason = AnalyzeMethod(implementation, visitingMethods, depth + 1);
+                if (reason is not null)
+                {
+                    return reason;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<Type> UserEnumeratorTypes(Assembly assembly)
+    {
+        Type[] types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException exception)
+        {
+            types = exception.Types.OfType<Type>().ToArray();
+        }
+
+        return types.Where(static candidate =>
+            !candidate.IsInterface && !candidate.IsAbstract && typeof(IEnumerator).IsAssignableFrom(candidate));
+    }
+
+    private static HashSet<MethodBase> EnumeratorMethods(Type type)
+    {
+        var methods = new HashSet<MethodBase>();
+        foreach (var interfaceType in type.GetInterfaces()
+                     .Where(static candidate =>
+                         candidate == typeof(IEnumerator) ||
+                         (candidate.IsGenericType && candidate.GetGenericTypeDefinition() == typeof(IEnumerator<>))))
+        {
+            var map = type.GetInterfaceMap(interfaceType);
+            foreach (var method in map.TargetMethods)
+            {
+                methods.Add(method);
+            }
+        }
+
+        return methods;
+    }
+
+    private static string? UnsupportedShapeReason(Type type)
+    {
+        if (DisallowedTypes.Contains(type) ||
+            IsHiddenStateType(type) ||
+            typeof(Delegate).IsAssignableFrom(type) ||
+            typeof(System.Linq.Expressions.Expression).IsAssignableFrom(type))
+        {
+            return "external-state, callback, or expression values are outside the probe domain";
+        }
+
+        if (type.IsGenericParameter || type.ContainsGenericParameters)
+        {
+            return "open generic values are outside the probe domain";
+        }
+
+        if (!type.IsPublic && !type.IsNestedPublic)
+        {
+            return "the type is not public";
+        }
+
+        if (type.IsInterface || type.IsAbstract || !HasConstructiblePublicPath(type))
+        {
+            return "no deterministic public construction path exists";
+        }
+
+        return null;
+    }
+
+    private static bool IsBuiltInCollection(Type type)
+    {
+        if (!type.IsGenericType)
+        {
+            return false;
+        }
+
+        var definition = type.GetGenericTypeDefinition();
+        return definition == typeof(List<>) || definition == typeof(HashSet<>) ||
+            definition == typeof(Dictionary<,>);
     }
 
     private static Type? GenericEnumerableElementType(Type type) =>

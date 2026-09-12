@@ -166,7 +166,7 @@ internal sealed class ValueObserver
 
     private static string Scalar(object value, Type type) =>
         type.IsEnum
-            ? $"{Enum.GetName(type, value)}:{Convert.ToUInt64(value, CultureInfo.InvariantCulture)}"
+            ? $"{Enum.GetName(type, value)}:{EnumNumericValue(value, type)}"
             : value is string text
                 ? text
                 : value is char character
@@ -176,6 +176,15 @@ internal sealed class ValueObserver
                 IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
                 _ => string.Empty
             };
+
+    private static string EnumNumericValue(object value, Type enumType)
+    {
+        var underlyingType = Enum.GetUnderlyingType(enumType);
+        return underlyingType == typeof(byte) || underlyingType == typeof(ushort) ||
+            underlyingType == typeof(uint) || underlyingType == typeof(ulong)
+            ? Convert.ToUInt64(value, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)
+            : Convert.ToInt64(value, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
+    }
 
     private static ObservedValue Unrepresentable(string reason) =>
         new("unrepresentable", Scalar: reason);

@@ -7,8 +7,8 @@ Generated scenarios: 80
 Stable scenarios: 80
 Behavioral divergences: 35
 Unsupported/inconclusive scenarios: 0
-Median comparison time: 827.7 ms
-Median witness-minimization time: 0.0 ms
+Median comparison time: 1027.1 ms
+Median witness-minimization time: 974.7 ms
 Seed: 12345
 
 API:
@@ -46,7 +46,7 @@ Baseline:
 Candidate:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"102","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
 Minimized witness:
-  arg0 = 100
+  arg0 = 0
 Reproduce with seed: 12345
 This is evidence of a behavioral difference, not an automatic breaking-change judgment.
 
@@ -59,7 +59,7 @@ Baseline:
 Candidate:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"-1","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"-1","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
 Minimized witness:
-  arg0 = -1
+  arg0 = 0
 Reproduce with seed: 12345
 This is evidence of a behavioral difference, not an automatic breaking-change judgment.
 
@@ -85,7 +85,7 @@ Baseline:
 Candidate:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"1002","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"1000","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"1000","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
 Minimized witness:
-  arg0 = 1000
+  arg0 = 0
 Reproduce with seed: 12345
 This is evidence of a behavioral difference, not an automatic breaking-change judgment.
 
@@ -111,7 +111,7 @@ Baseline:
 Candidate:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"103","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
 Minimized witness:
-  arg0 = 101
+  arg0 = 0
 Reproduce with seed: 12345
 This is evidence of a behavioral difference, not an automatic breaking-change judgment.
 
@@ -124,7 +124,7 @@ Baseline:
 Candidate:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"103","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"argumentsAfter":[{"kind":"scalar","typeName":"System.Int32","scalar":"101","items":null,"members":null}],"receiverAfter":null,"isRepresentable":true}
 Minimized witness:
-  arg0 = 101
+  arg0 = 0
 Reproduce with seed: 12345
 This is evidence of a behavioral difference, not an automatic breaking-change judgment.
 

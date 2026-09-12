@@ -30,11 +30,100 @@ public sealed class GraphFixture
     public string? Name { get; set; }
 }
 
+public enum SignedFixtureValue
+{
+    Negative = -1,
+    Zero = 0
+}
+
+public sealed class HiddenReceiverFixture
+{
+    private readonly int marker = 1;
+
+    public HiddenReceiverFixture()
+    {
+        _ = Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN");
+    }
+
+    public int Read() => marker;
+}
+
+public sealed class HiddenInputConstructorFixture
+{
+    public HiddenInputConstructorFixture()
+    {
+        _ = Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN");
+    }
+}
+
+public sealed class HiddenInputSetterFixture
+{
+    private int value;
+
+    public int Value
+    {
+        get => value;
+        set
+        {
+            this.value = value;
+            _ = Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN");
+        }
+    }
+}
+
+public sealed class HiddenGetterFixture
+{
+    private readonly int marker = 1;
+
+    public string Value => (Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN") ?? string.Empty) + marker;
+}
+
+public sealed class HiddenEnumerableFixture : IEnumerable<int>
+{
+    private int count;
+
+    public void Add(int value)
+    {
+        count += value;
+    }
+
+    public IEnumerator<int> GetEnumerator() => Iterate();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    private static IEnumerator<int> Iterate()
+    {
+        yield return Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN")?.Length ?? 0;
+    }
+}
+
 public static class ProbeFixture
 {
     private static int mutableState;
 
     public static int Add(int value) => value + 1;
+
+    public static SignedFixtureValue EchoSignedEnum(SignedFixtureValue value) => value;
+
+    public static HiddenInputConstructorFixture AcceptHiddenInputConstructor(HiddenInputConstructorFixture value) => value;
+
+    public static HiddenInputSetterFixture AcceptHiddenInputSetter(HiddenInputSetterFixture value) => value;
+
+    public static HiddenGetterFixture HiddenGetter() => new();
+
+    public static HiddenEnumerableFixture HiddenEnumerable() => new();
+
+    public static async Task<int> HiddenTask()
+    {
+        await Task.FromResult(0);
+        return Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN")?.Length ?? 0;
+    }
+
+    public static async ValueTask<int> HiddenValueTask()
+    {
+        await ValueTask.FromResult(0);
+        return Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN")?.Length ?? 0;
+    }
 
     public static int Add(string value) => value.Length;
 
@@ -272,6 +361,33 @@ public sealed class SurfaceDiscoveryTests
     }
 }
 
+public sealed class IndirectExecutionSupportTests
+{
+    public static IEnumerable<object[]> Hidden_state_paths()
+    {
+        yield return [nameof(ProbeFixture.HiddenGetter)];
+        yield return [nameof(ProbeFixture.HiddenEnumerable)];
+        yield return [nameof(ProbeFixture.HiddenTask)];
+        yield return [nameof(ProbeFixture.HiddenValueTask)];
+        yield return [nameof(HiddenReceiverFixture.Read), typeof(HiddenReceiverFixture)];
+        yield return [nameof(ProbeFixture.AcceptHiddenInputConstructor)];
+        yield return [nameof(ProbeFixture.AcceptHiddenInputSetter)];
+    }
+
+    [Theory]
+    [MemberData(nameof(Hidden_state_paths))]
+    public void Hidden_state_in_every_indirect_execution_path_is_unsupported(string methodName, Type? declaringType = null)
+    {
+        var type = declaringType ?? typeof(ProbeFixture);
+        var method = type.GetMethod(methodName)!;
+
+        var reason = TypeSupport.UnsupportedReason(method);
+
+        Assert.NotNull(reason);
+        Assert.Contains("hidden", reason, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
 public sealed class ScenarioGenerationTests
 {
     [Fact]
@@ -463,6 +579,22 @@ public sealed class ScenarioGenerationTests
         var instance = Assert.IsType<Dictionary<bool, int>>(ValueInstantiator.Create(value, typeof(Dictionary<bool, int>)));
         Assert.Equal(instance.Keys.Distinct().Count(), instance.Count);
     }
+
+    [Fact]
+    public void Time_like_generation_is_type_specific_and_deterministically_instantiable()
+    {
+        var types = new[] { typeof(DateTime), typeof(DateTimeOffset), typeof(TimeSpan) };
+        foreach (var type in types)
+        {
+            var first = GeneratedValueFactory.Create(type, new DeterministicRandom(9), 0, 3, 4, 1);
+            var second = GeneratedValueFactory.Create(type, new DeterministicRandom(9), 0, 3, 4, 1);
+
+            Assert.Equal(ObservationCodec.Serialize(first), ObservationCodec.Serialize(second));
+            var instance = ValueInstantiator.Create(first, type);
+            Assert.NotNull(instance);
+            Assert.Equal(type, instance.GetType());
+        }
+    }
 }
 
 public sealed class ObservationTests
@@ -520,6 +652,54 @@ public sealed class MinimizationTests
         Assert.True(result.Attempts <= 5);
         Assert.InRange(result.Scenario.Arguments[0].TextValue!.Length, 0, 2);
     }
+
+    [Fact]
+    public async Task Integer_divergence_shrinks_to_a_smaller_reproducible_witness()
+    {
+        var original = new GeneratedScenario(
+            0,
+            42,
+            [new GeneratedValue
+            {
+                Kind = GeneratedValueKind.Integer,
+                TypeName = "System.Int32",
+                IntegerValue = 100
+            }]);
+        var options = new ProbeOptions(MinimizationMaxAttempts: 20, MinimizationTimeoutMilliseconds: 1000);
+
+        var result = await WitnessMinimizer.MinimizeAsync(
+            original,
+            scenario => Task.FromResult(scenario.Arguments[0].IntegerValue >= 1),
+            options);
+
+        Assert.True(result.Scenario.Size < original.Size);
+        Assert.Equal(1, result.Scenario.Arguments[0].IntegerValue);
+        Assert.True(result.Scenario.Arguments[0].IntegerValue >= 1);
+    }
+
+    [Fact]
+    public async Task Floating_point_divergence_shrinks_to_a_smaller_reproducible_witness()
+    {
+        var original = new GeneratedScenario(
+            0,
+            42,
+            [new GeneratedValue
+            {
+                Kind = GeneratedValueKind.FloatingPoint,
+                TypeName = "System.Double",
+                FloatingPointValue = 100.5
+            }]);
+        var options = new ProbeOptions(MinimizationMaxAttempts: 20, MinimizationTimeoutMilliseconds: 1000);
+
+        var result = await WitnessMinimizer.MinimizeAsync(
+            original,
+            scenario => Task.FromResult(scenario.Arguments[0].FloatingPointValue >= 1d),
+            options);
+
+        Assert.True(result.Scenario.Size < original.Size);
+        Assert.Equal(1d, result.Scenario.Arguments[0].FloatingPointValue);
+        Assert.True(result.Scenario.Arguments[0].FloatingPointValue >= 1d);
+    }
 }
 
 public sealed class WorkerProcessTests
@@ -528,6 +708,32 @@ public sealed class WorkerProcessTests
         Directory.Exists(Path.Combine(Path.GetTempPath(), "behavior-oracle"))
             ? Directory.GetDirectories(Path.Combine(Path.GetTempPath(), "behavior-oracle"))
             : [];
+
+    [Fact]
+    public async Task Worker_observes_negative_signed_enum_without_an_execution_failure()
+    {
+        var method = typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.EchoSignedEnum))!;
+        var scenario = new GeneratedScenario(
+            0,
+            1,
+            [new GeneratedValue
+            {
+                Kind = GeneratedValueKind.Enum,
+                TypeName = TypeNames.For(typeof(SignedFixtureValue)),
+                TextValue = nameof(SignedFixtureValue.Negative)
+            }]);
+
+        var response = await new WorkerRunner().ExecuteAsync(
+            typeof(ProbeFixture).Assembly.Location,
+            TypeNames.Method(method),
+            scenario,
+            new ProbeOptions(ConfirmationRuns: 1));
+
+        Assert.True(response.Success, response.FailureCategory);
+        Assert.NotNull(response.Observation);
+        Assert.True(response.Observation!.IsRepresentable);
+        Assert.Contains(":-1", response.Observation.ReturnValue!.Scalar, StringComparison.Ordinal);
+    }
 
     [Fact]
     public async Task Worker_executes_a_method_in_a_child_process()

@@ -59,7 +59,12 @@ internal sealed record GeneratedScenario(
 
     private static int ValueSize(GeneratedValue value)
     {
-        var size = 1;
+        var size = value.Kind switch
+        {
+            GeneratedValueKind.Integer => NumericSize(value.IntegerValue, value.UnsignedIntegerValue),
+            GeneratedValueKind.FloatingPoint => FloatingPointSize(value.FloatingPointValue),
+            _ => 1
+        };
         if (value.Items is not null)
         {
             size += value.Items.Sum(ValueSize);
@@ -77,6 +82,16 @@ internal sealed record GeneratedScenario(
 
         return size;
     }
+
+    private static int NumericSize(long signedValue, ulong? unsignedValue) =>
+        unsignedValue is ulong unsigned
+            ? unsigned == 0 ? 1 : unsigned.ToString(System.Globalization.CultureInfo.InvariantCulture).Length
+            : signedValue == 0 ? 1 : signedValue.ToString(System.Globalization.CultureInfo.InvariantCulture).Length;
+
+    private static int FloatingPointSize(double value) =>
+        value == 0d
+            ? 1
+            : value.ToString("R", System.Globalization.CultureInfo.InvariantCulture).Length;
 }
 
 internal sealed record ApiDescriptor(

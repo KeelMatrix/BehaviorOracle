@@ -173,16 +173,44 @@ internal static class GeneratedValueFactory
             };
         }
 
-        if (type == typeof(DateTime) || type == typeof(DateTimeOffset) ||
-            type == typeof(TimeSpan) || type == typeof(Guid))
+        if (type == typeof(DateTime))
         {
             return new GeneratedValue
             {
                 Kind = GeneratedValueKind.String,
                 TypeName = TypeNames.For(type),
-                TextValue = type == typeof(Guid)
-                    ? "00000000-0000-0000-0000-" + (variant % 10000000000L).ToString("D12", CultureInfo.InvariantCulture)
-                    : variant % 2 == 0 ? "2020-01-02T03:04:05.0000000Z" : "00:00:01"
+                TextValue = DateTimeValues[variant % DateTimeValues.Length]
+            };
+        }
+
+        if (type == typeof(DateTimeOffset))
+        {
+            return new GeneratedValue
+            {
+                Kind = GeneratedValueKind.String,
+                TypeName = TypeNames.For(type),
+                TextValue = DateTimeOffsetValues[variant % DateTimeOffsetValues.Length]
+            };
+        }
+
+        if (type == typeof(TimeSpan))
+        {
+            return new GeneratedValue
+            {
+                Kind = GeneratedValueKind.String,
+                TypeName = TypeNames.For(type),
+                TextValue = TimeSpanValues[variant % TimeSpanValues.Length]
+            };
+        }
+
+        if (type == typeof(Guid))
+        {
+            return new GeneratedValue
+            {
+                Kind = GeneratedValueKind.String,
+                TypeName = TypeNames.For(type),
+                TextValue = "00000000-0000-0000-0000-" +
+                    (variant % 10000000000L).ToString("D12", CultureInfo.InvariantCulture)
             };
         }
 
@@ -374,6 +402,28 @@ internal static class GeneratedValueFactory
         public static implicit operator IntegerChoice(uint value) => new(value, null);
         public static IntegerChoice Unsigned(ulong value) => new(0, value);
     }
+
+    private static readonly string[] DateTimeValues =
+    [
+        "2020-01-02T03:04:05.0000000Z",
+        "2021-06-07T08:09:10.0000000Z",
+        "0001-01-01T00:00:00.0000000Z"
+    ];
+
+    private static readonly string[] DateTimeOffsetValues =
+    [
+        "2020-01-02T03:04:05.0000000+00:00",
+        "2021-06-07T08:09:10.0000000+05:30",
+        "0001-01-01T00:00:00.0000000+00:00"
+    ];
+
+    private static readonly string[] TimeSpanValues =
+    [
+        "00:00:00",
+        "00:00:01",
+        "-00:00:01",
+        "1.02:03:04.0050000"
+    ];
 }
 
 internal static class ReflectionLookup
