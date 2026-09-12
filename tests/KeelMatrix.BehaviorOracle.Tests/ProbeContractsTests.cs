@@ -97,6 +97,20 @@ public sealed class HiddenEnumerableFixture : IEnumerable<int>
     }
 }
 
+public sealed class InterfaceTypedHiddenCollection : IReadOnlyCollection<int>
+{
+    public int Count => 1;
+
+    public IEnumerator<int> GetEnumerator() => Iterate();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    private static IEnumerator<int> Iterate()
+    {
+        yield return Environment.GetEnvironmentVariable("BEHAVIOR_ORACLE_HIDDEN")?.Length ?? 0;
+    }
+}
+
 public static class ProbeFixture
 {
     private static int mutableState;
@@ -112,6 +126,18 @@ public static class ProbeFixture
     public static HiddenGetterFixture HiddenGetter() => new();
 
     public static HiddenEnumerableFixture HiddenEnumerable() => new();
+
+    public static IEnumerable<int> InterfaceTypedHiddenEnumerable() => new InterfaceTypedHiddenCollection();
+
+    public static IReadOnlyCollection<int> InterfaceTypedHiddenCollection() => new InterfaceTypedHiddenCollection();
+
+    public static IEnumerator<int> InterfaceTypedHiddenEnumerator() => new InterfaceTypedHiddenCollection().GetEnumerator();
+
+    public static IEnumerable<object> InterfaceTypedVariantEnumerable() => Array.Empty<string>();
+
+    public static IReadOnlyList<int> InterfaceTypedReadOnlyList() => Array.Empty<int>();
+
+    public static IComparable<int> InterfaceTypedComparable() => 0;
 
     public static async Task<int> HiddenTask()
     {
@@ -385,6 +411,76 @@ public sealed class IndirectExecutionSupportTests
 
         Assert.NotNull(reason);
         Assert.Contains("hidden", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Interface_typed_return_shapes_are_skipped_without_configuration_or_execution_failure()
+    {
+        var methods = new[]
+        {
+            nameof(ProbeFixture.InterfaceTypedHiddenEnumerable),
+            nameof(ProbeFixture.InterfaceTypedHiddenCollection),
+            nameof(ProbeFixture.InterfaceTypedHiddenEnumerator),
+            nameof(ProbeFixture.InterfaceTypedVariantEnumerable),
+            nameof(ProbeFixture.InterfaceTypedReadOnlyList),
+            nameof(ProbeFixture.InterfaceTypedComparable)
+        };
+
+        foreach (var methodName in methods)
+        {
+            var method = typeof(ProbeFixture).GetMethod(methodName)!;
+            string? reason = null;
+            var exception = Record.Exception(() => reason = TypeSupport.UnsupportedReason(method));
+
+            Assert.Null(exception);
+            Assert.NotNull(reason);
+        }
+
+        var root = Directory.CreateTempSubdirectory("behavior-oracle-interface-return-");
+        var baseline = Directory.CreateDirectory(Path.Combine(root.FullName, "baseline"));
+        var candidate = Directory.CreateDirectory(Path.Combine(root.FullName, "candidate"));
+        var sourceAssembly = typeof(ProbeFixture).Assembly.Location;
+        var assemblyName = Path.GetFileName(sourceAssembly);
+        File.Copy(sourceAssembly, Path.Combine(baseline.FullName, assemblyName));
+        File.Copy(sourceAssembly, Path.Combine(candidate.FullName, assemblyName));
+
+        try
+        {
+            var signature = TypeNames.Method(typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.InterfaceTypedHiddenEnumerable))!);
+            var report = await new ComparisonEngine().CompareAsync(
+                baseline.FullName,
+                candidate.FullName,
+                new ProbeOptions(ScenarioBudget: 1, ConfirmationRuns: 2));
+
+            var result = Assert.Single(report.ScenarioResults, item => item.ApiSignature == signature);
+            Assert.Equal("SKIPPED", result.Classification);
+            Assert.Equal(0, report.ExecutionFailureCount);
+            Assert.NotEqual(ProbeResultStates.ExecutionFailure, report.ResultState);
+        }
+        finally
+        {
+            DeleteWithRetry(root);
+        }
+    }
+
+    private static void DeleteWithRetry(DirectoryInfo root)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            try
+            {
+                root.Delete(recursive: true);
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < 19)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Thread.Sleep(50);
+            }
+        }
+
+        root.Delete(recursive: true);
     }
 }
 

@@ -788,6 +788,11 @@ internal static class TypeSupport
             return null;
         }
 
+        if (type.IsInterface)
+        {
+            return "interface-typed return observations are outside the probe domain";
+        }
+
         if (IsTaskLike(type))
         {
             return AnalyzeObservation(type.GetGenericArguments()[0], visitingTypes, visitingMethods, depth + 1);

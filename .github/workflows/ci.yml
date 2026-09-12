@@ -126,12 +126,12 @@ jobs:
 
           [xml]$trx = Get-Content -LiteralPath $trxPath.FullName -Raw
           $counters = $trx.TestRun.ResultSummary.Counters
-          if ([int]$counters.total -ne 42 -or
-              [int]$counters.passed -ne 42 -or
+          if ([int]$counters.total -ne 54 -or
+              [int]$counters.passed -ne 54 -or
               [int]$counters.failed -ne 0 -or
               [int]$counters.errors -ne 0 -or
               [int]$counters.notExecuted -ne 0) {
-            throw "Expected 42 passing tests, got total=$($counters.total), passed=$($counters.passed), failed=$($counters.failed), errors=$($counters.errors), notExecuted=$($counters.notExecuted)."
+            throw "Expected 54 passing tests, got total=$($counters.total), passed=$($counters.passed), failed=$($counters.failed), errors=$($counters.errors), notExecuted=$($counters.notExecuted)."
           }
 
           $testNames = @($trx.TestRun.Results.UnitTestResult | ForEach-Object { $_.testName })

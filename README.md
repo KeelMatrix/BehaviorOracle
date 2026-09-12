@@ -146,7 +146,7 @@ Generation is deterministic from the explicit seed. The built-in corpus includes
 
 ## Unsupported and inconclusive behavior
 
-The tool skips or classifies conservatively when an API requires filesystem, network, database, process/environment, native, unsafe, callback, opaque external, timing, concurrency, cryptographic, random, or otherwise unsupported state. Huge stateful models and arbitrary application behavior are outside v1.
+The tool skips or classifies conservatively when an API requires filesystem, network, database, process/environment, native, unsafe, callback, opaque external, timing, concurrency, cryptographic, random, interface-typed return or argument observations, or otherwise unsupported state. Huge stateful models and arbitrary application behavior are outside v1. Concrete collection types are required at a callable boundary for supported execution, even though assignable concrete values can be generated for interface-typed collection inputs.
 
 Before comparing sides, each scenario runs repeatedly against the baseline and candidate independently. A scenario is divergent only when both sides are internally stable and their normalized observations differ. Nondeterministic or unrepresentable observations are inconclusive rather than equivalence. Worker crashes and timeouts are execution failures, never equivalence.
 
