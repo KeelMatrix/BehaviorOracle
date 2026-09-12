@@ -7,7 +7,7 @@
     "scenarioBudget": 32,
     "confirmationRuns": 3
   },
-  "engineAssemblySha512": "42FFEE04AFC051268E358470ABA27C7CD67930C18238691FFAB2D91D710E83E7DDB27D897B9D0C74EF5DB4ABAA4A46682A1AF03EDB63BDA5B1D046E82F5CF1EB",
+  "engineAssemblySha512": "62EAE81D07953A57B28AA4FD1ED04920885B3F043F888EFE36DCAB13C51AEECEB1FEA065DCDEAC423A4BDEC04D00421FAFD5986B3658EE68FB04C6C4723992C0",
   "engineBuildContract": {
     "configuration": "Release",
     "targetFramework": "net8.0",
@@ -127,10 +127,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 920.7,
+        "consoleMedianComparisonMilliseconds": 922.5,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 28822.4,
-        "repeatJsonProcessWallClockMilliseconds": 28084.0
+        "jsonProcessWallClockMilliseconds": 29915.6,
+        "repeatJsonProcessWallClockMilliseconds": 29186.5
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -189,10 +189,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 886.2,
+        "consoleMedianComparisonMilliseconds": 947.8,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 29912.1,
-        "repeatJsonProcessWallClockMilliseconds": 32293.6
+        "jsonProcessWallClockMilliseconds": 29002.9,
+        "repeatJsonProcessWallClockMilliseconds": 29186.1
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -258,10 +258,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 986.8,
+        "consoleMedianComparisonMilliseconds": 926.2,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 36587.9,
-        "repeatJsonProcessWallClockMilliseconds": 32314.8
+        "jsonProcessWallClockMilliseconds": 30051.7,
+        "repeatJsonProcessWallClockMilliseconds": 29757.5
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
