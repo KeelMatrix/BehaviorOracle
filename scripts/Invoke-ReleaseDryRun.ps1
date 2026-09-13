@@ -64,6 +64,9 @@ Assert-Condition ($publishSection.Contains('user: dmitriyzen', [StringComparison
 Assert-Condition ($workflow.Contains("tags:`r`n      - 'v*'", [StringComparison]::Ordinal) -or $workflow.Contains("tags:`n      - 'v*'", [StringComparison]::Ordinal)) 'The release workflow is not tag-triggered by v*.'
 Assert-Condition (-not [regex]::IsMatch($workflow, '(?m)^\s*workflow_dispatch:\s*$')) 'The release workflow unexpectedly enables manual dispatch.'
 
+$publicationContract = Join-Path $repository 'scripts/Test-ReleasePublicationContract.ps1'
+Invoke-Checked -File 'pwsh' -Arguments @('-NoProfile', '-File', $publicationContract, '-WorkflowPath', $workflowPath)
+
 $oldTelemetry = $env:KEELMATRIX_NO_TELEMETRY
 $env:KEELMATRIX_NO_TELEMETRY = '1'
 $env:RELEASE_TAG = $Tag

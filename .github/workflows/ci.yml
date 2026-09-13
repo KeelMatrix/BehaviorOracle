@@ -39,6 +39,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File scripts/Test-ChangelogContractContract.ps1
 
+      - name: Test release publication contract
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Test-ReleasePublicationContractContract.ps1
+
   platform:
     name: Platform / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

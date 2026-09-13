@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Real-target evidence now binds to a documented deterministic engine build and distinguishes stable report fields from volatile timing snapshots.
+- Release publication now disables automatic symbol upload on the primary package push and validates the explicit package/symbol push contract.
 
 ## [0.1.0] - Planned (not yet published)
 

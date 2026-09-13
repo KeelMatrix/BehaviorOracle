@@ -30,6 +30,7 @@ pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifa
 pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit (git rev-parse HEAD) -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
 pwsh -NoProfile -File .\scripts\Test-EngineReproducibility.ps1
 pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0
+pwsh -NoProfile -File .\scripts\Test-ReleasePublicationContractContract.ps1
 pwsh -NoProfile -File .\scripts\Test-ChangelogContract.ps1 -ExpectedVersion 0.1.0 -ExpectedPackageVersion 0.1.0 -ExpectedRepositoryCommit (git rev-parse HEAD)
 pwsh -NoProfile -File .\scripts\Test-ChangelogContractContract.ps1
 pwsh -NoProfile -File .\scripts\Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln

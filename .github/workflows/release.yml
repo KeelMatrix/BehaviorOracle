@@ -82,6 +82,10 @@ jobs:
           -ExpectedPackageVersion $env:RELEASE_VERSION
           -ExpectedRepositoryCommit $env:GITHUB_SHA
 
+      - name: Validate release publication contract
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/Test-ReleasePublicationContract.ps1
+
       - name: Restore from repository NuGet.config
         run: dotnet restore KeelMatrix.BehaviorOracle.sln --configfile NuGet.config --no-cache --force -p:NuGetAudit=false
 
@@ -303,7 +307,7 @@ jobs:
           $version = $env:RELEASE_VERSION
           $packageDirectory = [IO.Path]::Combine($PWD.Path, 'artifacts', 'packages')
           $source = 'https://api.nuget.org/v3/index.json'
-          dotnet nuget push (Join-Path $packageDirectory "KeelMatrix.BehaviorOracle.$version.nupkg") --source $source --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          dotnet nuget push (Join-Path $packageDirectory "KeelMatrix.BehaviorOracle.$version.nupkg") --source $source --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --no-symbols
           if ($LASTEXITCODE -ne 0) {
             throw "NuGet package publication failed with exit code $LASTEXITCODE."
           }
