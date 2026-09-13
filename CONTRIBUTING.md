@@ -6,6 +6,8 @@ Contributions are welcome as focused fixes, tests, and documentation improvement
 
 Use a clean clone and keep generated output, credentials, customer data, and machine-specific paths out of commits. Set `KEELMATRIX_NO_TELEMETRY=1` during local validation so development activity is not counted as external demand.
 
+Maintainer commit checks are documented in the [Git hooks guide](.githooks/README.md).
+
 ## Make changes
 
 Changes to CLI options, configuration, report states, exit codes, or supported semantic behavior should include focused regression coverage and matching README or changelog updates. Keep the core comparison read-only with respect to compared artifact directories.
@@ -34,7 +36,7 @@ pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifa
 pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit $commit -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
 ```
 
-The smoke test uses an isolated local feed and cache directories; it does not change a global tool installation. The release dry run is available only after the target changelog entry is finalized:
+The smoke test uses an isolated local feed and cache directories; it does not change a global tool installation. The release dry run is expected to pass only after the target changelog entry is finalized. It can be run earlier to exercise the gate, but the changelog contract is expected to fail until release preparation is complete:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0

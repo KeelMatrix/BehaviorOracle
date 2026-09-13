@@ -69,6 +69,7 @@ The phrase “within tested domain” is intentional. Unsupported APIs do not be
 
 ## Documentation
 
+- [Configuration and report schema change checklist](docs/SCHEMA_CHANGE_CHECKLIST.md)
 - [Synthetic benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/benchmark-report.md)
 - [Real-library feasibility evidence](https://github.com/KeelMatrix/BehaviorOracle/blob/main/bench/real-targets.md)
 - [Security Policy](https://github.com/KeelMatrix/BehaviorOracle/blob/main/SECURITY.md)
