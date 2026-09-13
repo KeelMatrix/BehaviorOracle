@@ -20,6 +20,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Versioned console and JSON reports with stable result states, exit codes, and local evidence.
 - A composite GitHub Action that builds selected baseline and candidate revisions before invoking the comparison tool.
 
-### Privacy
+### Changed
 
-- Local comparison inputs, observations, and witnesses stay local. Best-effort telemetry is limited to the shared activation and heartbeat contract and is disabled for KeelMatrix development and CI.
+- Documented that local comparison inputs, observations, and witnesses stay local. Best-effort telemetry is limited to the shared activation and heartbeat contract and is disabled for KeelMatrix development and CI.

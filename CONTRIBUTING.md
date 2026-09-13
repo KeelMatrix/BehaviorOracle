@@ -2,12 +2,57 @@
 
 Contributions are welcome as focused fixes, tests, and documentation improvements.
 
+## Before you begin
+
+Use a clean clone and keep generated output, credentials, customer data, and machine-specific paths out of commits. Set `KEELMATRIX_NO_TELEMETRY=1` during local validation so development activity is not counted as external demand.
+
+## Make changes
+
+Changes to CLI options, configuration, report states, exit codes, or supported semantic behavior should include focused regression coverage and matching README or changelog updates. Keep the core comparison read-only with respect to compared artifact directories.
+
 ## Validate locally
 
 Use the commands in [`AGENTS.md`](AGENTS.md) for the repository CI-equivalent path. They cover restore, Release build, tests, formatting, the synthetic benchmark, package inspection, isolated package-consumer smoke, and dependency auditing.
 
-Set `KEELMATRIX_NO_TELEMETRY=1` during local validation. Keep fixtures, reports, and documentation free of credentials, customer data, and machine-specific paths.
+## Validate an unreleased build
 
-Changes to CLI options, configuration, report states, exit codes, or supported semantic behavior should include focused regression coverage and matching README or changelog updates.
+The first `0.1.0` package is not published. From the repository root, run the current source from a clean clone with:
 
-Security reports must use the private channels in [`SECURITY.md`](SECURITY.md), not a public issue.
+```powershell
+$env:KEELMATRIX_NO_TELEMETRY = '1'
+dotnet restore .\KeelMatrix.BehaviorOracle.sln --configfile .\NuGet.config -p:NuGetAudit=false
+dotnet run --project .\src\KeelMatrix.BehaviorOracle -- --help
+```
+
+To validate the packed tool before publication, pack it and run the isolated package contract and consumer checks:
+
+```powershell
+dotnet build .\KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror
+dotnet pack .\src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj --configuration Release --no-build --no-restore --include-symbols -p:SymbolPackageFormat=snupkg --output .\artifacts\packages
+$commit = (git rev-parse HEAD).Trim()
+pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit $commit
+pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit $commit -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
+```
+
+The smoke test uses an isolated local feed and cache directories; it does not change a global tool installation. The release dry run is available only after the target changelog entry is finalized:
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0
+pwsh -NoProfile -File .\scripts\Test-ReleasePublicationContractContract.ps1
+```
+
+A planned changelog entry is expected to fail the release dry-run gate until release preparation is complete. The dry run never publishes the package.
+
+## Validate the Action wrapper
+
+On Windows, run:
+
+```powershell
+pwsh -NoProfile -File .\action\Test-Action.ps1
+```
+
+This covers equivalent and divergent comparisons, invalid paths, candidate build failures, tool installation failures, relative paths, spaces, Windows casing, exit-code propagation, and cleanup.
+
+## Security and community
+
+Security reports must use the private channels in [`SECURITY.md`](SECURITY.md), not a public issue. Community conduct concerns should follow [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), not the vulnerability-reporting route.

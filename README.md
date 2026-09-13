@@ -4,13 +4,17 @@ Public API compatibility can stay green while behavior changes underneath it. Be
 
 BehaviorOracle is evidence gathering, not a proof of arbitrary semantic equivalence and not an automatic breaking-change judgment.
 
-## Install, update, and uninstall
+## Install
 
-Install the first public package from NuGet.org with:
+The first `0.1.0` release is not yet published on NuGet.org. After publication, install it with:
 
 ```powershell
 dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0
 ```
+
+For the current unreleased source and package validation paths, see the [contributor guide](https://github.com/KeelMatrix/BehaviorOracle/blob/main/CONTRIBUTING.md).
+
+### Update
 
 Update an existing installation with:
 
@@ -18,37 +22,15 @@ Update an existing installation with:
 dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.0
 ```
 
+### Uninstall
+
 Remove it with:
 
 ```powershell
 dotnet tool uninstall --global KeelMatrix.BehaviorOracle
 ```
 
-The package is not published yet. Before publication, use the source and
-isolated package-smoke commands below to validate the current release candidate.
-
-## Try the current unreleased build
-
-The first `0.1.0` package is not published yet. Run the current source from a clean clone with:
-
-```powershell
-dotnet restore .\KeelMatrix.BehaviorOracle.sln --configfile .\NuGet.config -p:NuGetAudit=false
-dotnet run --project .\src\KeelMatrix.BehaviorOracle -- --help
-```
-
-To exercise the packed tool before publication, use the repository's package smoke command described below. It installs from an isolated local feed rather than changing your global tool installation.
-
-## Package validation for maintainers
-
-The repository's package contract is checked against the actual `.nupkg` and `.snupkg` archives. `scripts/Verify-PackageContract.ps1` uses an explicit allowlist for runtime, symbol, source, and NuGet-generated metadata entries; validates package metadata, the 512x512 icon and SourceLink; rejects unexpected archive entries; and repeats packing to compare canonical archive hashes. The only canonicalization is for the random identifiers NuGet generates in the allowlisted core-properties relationship metadata.
-
-The package-consumer smoke uses fresh `NUGET_PACKAGES`, HTTP-cache, plugin-cache, scratch, and .NET CLI home directories plus a generated source-mapped NuGet configuration. `KeelMatrix.BehaviorOracle` resolves only from the local candidate feed; its runtime dependency resolves from NuGet.org. It verifies the installed candidate package hash before exercising equivalent and planted-divergence comparisons.
-
-After finalizing the target `CHANGELOG.md` entry, maintainers can validate the first-release path without publishing by running `pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0`. The dry-run checks the exact-commit changelog/version contract, the workflow's version-output handoff, the exact package/symbol publication contract, builds and packs the exact version, inspects both archives, runs the isolated consumer smoke, and explicitly skips publication. A planned or unreleased changelog entry is expected to fail this gate until release preparation is complete. The publication contract regression test is `pwsh -NoProfile -File .\scripts\Test-ReleasePublicationContractContract.ps1`; it also proves that the pre-fix primary push without `--no-symbols` fails validation.
-
-The pinned real-library evidence under `bench/real-targets.md` uses a documented deterministic Release build contract and a two-clean-clone engine-hash check. Its report JSON, counts, classifications, signatures, witnesses, and hashes are stable evidence; elapsed timings and host-environment snapshots are intentionally volatile context and are not compared for exact equality.
-
-## Five-minute comparison
+## Quick Start
 
 Build the baseline and candidate library artifacts into separate directories. The directories must contain the assemblies and dependencies needed to execute the compared APIs.
 
@@ -69,7 +51,7 @@ Run the comparison:
 behavior-oracle compare --baseline .\artifacts\baseline --candidate .\artifacts\candidate --config .\oracle.json
 ```
 
-Useful command-line overrides are `--seed`, `--scenario-budget`, `--timeout` (milliseconds), and `--format console|json`. The configuration file is required for `compare`; command-line overrides take precedence over its values.
+Useful command-line overrides are `--seed`, `--scenario-budget`, `--confirmation-runs`, `--timeout` (milliseconds), and `--format console|json`. The configuration file is required for `compare`; command-line overrides take precedence over its values.
 
 An equivalent result looks like:
 
@@ -84,6 +66,13 @@ Unsupported/inconclusive scenarios: 32
 ```
 
 The phrase “within tested domain” is intentional. Unsupported APIs do not become evidence of equivalence.
+
+## Documentation
+
+- [Synthetic benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/benchmark-report.md)
+- [Real-library feasibility evidence](https://github.com/KeelMatrix/BehaviorOracle/blob/main/bench/real-targets.md)
+- [Security Policy](https://github.com/KeelMatrix/BehaviorOracle/blob/main/SECURITY.md)
+- [Privacy](https://github.com/KeelMatrix/BehaviorOracle/blob/main/PRIVACY.md)
 
 ## Result states and exit codes
 
@@ -190,19 +179,13 @@ The repository includes a composite Action under `action/`. After the tool packa
 
 The wrapper requires the tool version to be available from the configured package source. It does not replace ordinary build or API-compatibility checks.
 
-Maintainers can validate the committed wrapper on Windows with:
-
-```powershell
-pwsh -NoProfile -File .\action\Test-Action.ps1
-```
-
-The validation exercises equivalent, divergent, invalid-path, candidate-build-failure, and tool-install-failure cases. It also covers relative paths, spaces, Windows casing, exit-code propagation, and cleanup. The committed evidence is Windows PowerShell with .NET 8; Linux and macOS Action support is not claimed until independently exercised.
+The committed wrapper has been validated on Windows PowerShell with .NET 8. Linux and macOS Action support is not claimed until independently exercised. Maintainer validation details are in the [contributor guide](https://github.com/KeelMatrix/BehaviorOracle/blob/main/CONTRIBUTING.md).
 
 ## Platform evidence and limitations
 
 The repository's CI validates the tool and worker/process scenarios with .NET 8.0 on `windows-latest`, `ubuntu-latest`, and `macos-latest` in its `platform` job. That matrix runs restore, a Release build with warnings as errors, format verification, the full test suite, the deterministic synthetic benchmark, the ordinary dependency-audit mode, and telemetry-suppression checks. The Windows matrix leg also validates the committed Action wrapper.
 
-The separate `dependency-audit-required` job runs on `ubuntu-latest` and fails closed when vulnerability-advisory data is unavailable. After the platform matrix passes, the dependent `package` job runs on `ubuntu-latest`. It packs the `KeelMatrix.BehaviorOracle` 0.1.0 package and symbols, inspects the exact archive contents, installs the packed tool from an isolated feed, exercises equivalent and planted-divergence comparisons, and verifies telemetry remains suppressed. See the [CI workflow](https://github.com/KeelMatrix/BehaviorOracle/blob/main/.github/workflows/ci.yml).
+The repository's package and dependency gates also run in CI. See the [CI workflow](https://github.com/KeelMatrix/BehaviorOracle/blob/main/.github/workflows/ci.yml) and the [benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/benchmark-report.md) for the committed evidence.
 
 This evidence covers the tested .NET 8.0 tool and worker/process scenarios on those GitHub-hosted runner images. It does not guarantee that every compared assembly runs on every operating system; behavior remains subject to the compared library and host environment.
 

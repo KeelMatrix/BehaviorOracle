@@ -1,6 +1,6 @@
 # Security Policy
 
-## Reporting a vulnerability
+## Reporting a Vulnerability
 
 Report suspected vulnerabilities privately before any public disclosure:
 
@@ -18,10 +18,12 @@ Include, when safe:
 
 We aim to acknowledge reports within five business days and will provide follow-up as the assessment proceeds. Do not include secrets or unnecessary customer data in a report.
 
+Routine bug reports and questions should use the project's normal public channels, not the private security channels, unless they may involve a vulnerability.
+
 ## Scope
 
 This policy covers the BehaviorOracle tool package, its comparison workers, report handling, telemetry integration, composite Action, and repository release artifacts. Vulnerabilities in a library being compared, its dependencies, or a user's build environment should be reported to the relevant maintainer, but may be included when they expose a BehaviorOracle security boundary.
 
-## Supported versions
+## Supported Versions
 
 Security fixes are prioritized for the latest maintained BehaviorOracle release line and its supported .NET 8 runtime environments. Older versions and unsupported runtimes may receive fixes on a case-by-case basis.
