@@ -11,6 +11,7 @@
     <ToolCommandName>behavior-oracle</ToolCommandName>
     <PackageId>KeelMatrix.BehaviorOracle</PackageId>
     <Authors>KeelMatrix</Authors>
+    <Copyright>KeelMatrix</Copyright>
     <Description>Compare two .NET library builds with deterministic scenarios and receive a minimized witness when stable behavior diverges.</Description>
     <PackageTags>dotnet;compatibility;semantic-versioning;regression-testing;differential-testing;testing;nuget;ci;dotnet-tool</PackageTags>
     <RepositoryUrl>https://github.com/KeelMatrix/BehaviorOracle</RepositoryUrl>

@@ -16,9 +16,9 @@ Changes to CLI options, configuration, report states, exit codes, or supported s
 
 Use the commands in [`AGENTS.md`](AGENTS.md) for the repository CI-equivalent path. They cover restore, Release build, tests, formatting, the synthetic benchmark, package inspection, isolated package-consumer smoke, and dependency auditing.
 
-## Validate an unreleased build
+## Validate a local build
 
-The first `0.1.0` package is not published. From the repository root, run the current source from a clean clone with:
+From the repository root, run the tool from a clean clone with:
 
 ```powershell
 $env:KEELMATRIX_NO_TELEMETRY = '1'
@@ -26,7 +26,7 @@ dotnet restore .\KeelMatrix.BehaviorOracle.sln --configfile .\NuGet.config -p:Nu
 dotnet run --project .\src\KeelMatrix.BehaviorOracle -- --help
 ```
 
-To validate the packed tool before publication, pack it and run the isolated package contract and consumer checks:
+To validate the packed tool, pack it and run the isolated package contract and consumer checks:
 
 ```powershell
 dotnet build .\KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror

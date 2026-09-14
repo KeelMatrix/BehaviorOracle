@@ -27,6 +27,7 @@ $dependencyId = 'KeelMatrix.Telemetry'
 $dependencyVersion = '0.1.0'
 $targetFramework = 'net8.0'
 $packageNamespace = 'http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd'
+$copyright = 'KeelMatrix'
 
 function Assert-Contract {
     param(
@@ -188,6 +189,8 @@ function Assert-CommonMetadata {
     Assert-Contract ($actualTags -ceq $tags) 'Package tags are incorrect.'
     $actualDescription = Get-MetadataText -Document $Document -XPath '/n:package/n:metadata/n:description' -Description 'the package description'
     Assert-Contract ($actualDescription -ceq $description) 'Package description is incorrect.'
+    $actualCopyright = Get-MetadataText -Document $Document -XPath '/n:package/n:metadata/n:copyright' -Description 'the copyright'
+    Assert-Contract ($actualCopyright -ceq $copyright) "Package copyright must be '$copyright'."
 
     $packageTypes = @(Get-MetadataNode -Document $Document -XPath '/n:package/n:metadata/n:packageTypes/n:packageType')
     Assert-Contract ($packageTypes.Count -eq 1) 'Package type metadata must contain exactly one package type.'

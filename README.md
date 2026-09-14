@@ -6,13 +6,13 @@ BehaviorOracle is evidence gathering, not a proof of arbitrary semantic equivale
 
 ## Install
 
-The first `0.1.0` release is not yet published on NuGet.org. After publication, install it with:
+Install the tool from NuGet.org with:
 
 ```powershell
 dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0
 ```
 
-For the current unreleased source and package validation paths, see the [contributor guide](https://github.com/KeelMatrix/BehaviorOracle/blob/main/CONTRIBUTING.md).
+For contribution and package validation paths, see the [contributor guide](https://github.com/KeelMatrix/BehaviorOracle/blob/main/CONTRIBUTING.md).
 
 ### Update
 
