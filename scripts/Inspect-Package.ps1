@@ -164,6 +164,57 @@ function Assert-RequiredEntries {
     }
 }
 
+function Assert-PackageReadmeLinks {
+    param(
+        [Parameter(Mandatory = $true)][System.IO.Compression.ZipArchive]$Archive
+    )
+
+    $readme = Read-ZipEntryText -Archive $Archive -Name 'README.md'
+    $packedEntries = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($entry in $Archive.Entries) {
+        [void]$packedEntries.Add($entry.FullName.Replace('\', '/'))
+    }
+
+    $linkPattern = '\[[^\]]*\]\(\s*(?<target><[^>\r\n]*>|[^)\s]+)(?:\s+[^)]*)?\)'
+    foreach ($match in [Text.RegularExpressions.Regex]::Matches($readme, $linkPattern)) {
+        $target = $match.Groups['target'].Value.Trim()
+        if ($target.StartsWith('<') -and $target.EndsWith('>')) {
+            $target = $target.Substring(1, $target.Length - 2)
+        }
+
+        if ([string]::IsNullOrWhiteSpace($target) -or $target.StartsWith('#')) {
+            continue
+        }
+
+        if ($target -match '^[A-Za-z][A-Za-z0-9+.-]*:' -or $target.StartsWith('//')) {
+            continue
+        }
+
+        $path = ($target -split '[?#]', 2)[0]
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            continue
+        }
+
+        try {
+            $path = [Uri]::UnescapeDataString($path)
+        }
+        catch {
+            throw "Packed README contains an invalid relative link target '$target'."
+        }
+
+        $path = $path.Replace('\', '/')
+        while ($path.StartsWith('./')) {
+            $path = $path.Substring(2)
+        }
+
+        Assert-Contract (
+            -not [string]::IsNullOrWhiteSpace($path) -and
+            -not $path.StartsWith('/') -and
+            $packedEntries.Contains($path)
+        ) "Packed README contains a relative link to an unpacked path '$target'."
+    }
+}
+
 function Assert-CommonMetadata {
     param(
         [Parameter(Mandatory = $true)][Xml.XmlDocument]$Document,
@@ -324,6 +375,7 @@ function Inspect-Nupkg {
 
         $metadataEntries = @($archive.Entries | Where-Object { $_.FullName -match '^package/services/metadata/core-properties/[0-9a-f]{32}\.psmdcp$' })
         Assert-Contract ($metadataEntries.Count -eq 1) 'The tool package must contain exactly one NuGet core-properties metadata entry.'
+        Assert-PackageReadmeLinks -Archive $archive
 
         $nuspec = Read-XmlEntry -Archive $archive -Name "$packageId.nuspec"
         Assert-CommonMetadata -Document $nuspec -ToolPackage $true -ExpectedCommit $ExpectedCommit

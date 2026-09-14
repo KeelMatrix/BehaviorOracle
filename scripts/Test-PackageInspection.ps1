@@ -65,6 +65,48 @@ function Set-NuspecCopyright {
     }
 }
 
+function Set-PackageReadmeLink {
+    param(
+        [Parameter(Mandatory = $true)][string]$PackagePath,
+        [Parameter(Mandatory = $true)][string]$CurrentLink,
+        [Parameter(Mandatory = $true)][string]$ReplacementLink
+    )
+
+    $stream = [IO.File]::Open($PackagePath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    try {
+        $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Update, $false)
+        try {
+            $entry = $archive.GetEntry('README.md')
+            Assert-Test ($null -ne $entry) 'The synthetic package is missing its README.'
+            $reader = [IO.StreamReader]::new($entry.Open())
+            try {
+                $readme = $reader.ReadToEnd()
+            }
+            finally {
+                $reader.Dispose()
+            }
+
+            Assert-Test ($readme.Contains($CurrentLink, [StringComparison]::Ordinal)) 'The synthetic package README does not contain the expected canonical schema checklist link.'
+            $updatedReadme = $readme.Replace($CurrentLink, $ReplacementLink, [StringComparison]::Ordinal)
+            $entry.Delete()
+            $newEntry = $archive.CreateEntry('README.md')
+            $writer = [IO.StreamWriter]::new($newEntry.Open(), [Text.UTF8Encoding]::new($false))
+            try {
+                $writer.Write($updatedReadme)
+            }
+            finally {
+                $writer.Dispose()
+            }
+        }
+        finally {
+            $archive.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 function Invoke-NegativeInspection {
     param(
         [Parameter(Mandatory = $true)][string]$Mutation,
@@ -96,6 +138,33 @@ function Invoke-NegativeInspection {
     }
 }
 
+function Invoke-ReadmeLinkNegativeInspection {
+    param(
+        [Parameter(Mandatory = $true)][string]$PackagePath,
+        [Parameter(Mandatory = $true)][string]$SymbolsPath,
+        [Parameter(Mandatory = $true)][string]$InspectorPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedRepositoryCommit
+    )
+
+    Set-PackageReadmeLink -PackagePath $PackagePath `
+        -CurrentLink 'https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/SCHEMA_CHANGE_CHECKLIST.md' `
+        -ReplacementLink 'docs/SCHEMA_CHANGE_CHECKLIST.md'
+    $arguments = @(
+        '-NoProfile',
+        '-File', $InspectorPath,
+        '-PackagePath', $PackagePath,
+        '-SymbolsPath', $SymbolsPath
+    )
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
+        $arguments += @('-ExpectedRepositoryCommit', $ExpectedRepositoryCommit)
+    }
+
+    $output = (& pwsh @arguments 2>&1 | Out-String).TrimEnd()
+    $exitCode = $LASTEXITCODE
+    Assert-Test ($exitCode -ne 0) 'The package inspector accepted a relative README link to an unpacked path.'
+    Assert-Test ($output.Contains("relative link to an unpacked path 'docs/SCHEMA_CHANGE_CHECKLIST.md'.", [StringComparison]::Ordinal)) "The unpacked relative README link was rejected without the expected diagnostic. Output: $output"
+}
+
 function Remove-TemporaryDirectory {
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -118,6 +187,7 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) "behaviororacle-package-inspect
 $mutatedPackage = Join-Path $testRoot 'KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $wrongCopyrightPackage = Join-Path $testRoot 'wrong-copyright\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $missingCopyrightPackage = Join-Path $testRoot 'missing-copyright\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
+$relativeReadmePackage = Join-Path $testRoot 'relative-readme\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $output = $null
 $exitCode = $null
 
@@ -160,12 +230,14 @@ try {
     $exitCode = $LASTEXITCODE
     Assert-Test ($exitCode -ne 0) 'The package inspector accepted an unexpected benign-looking archive entry.'
     Assert-Test ($output.Contains("unexpected archive entry 'tools/net8.0/any/diagnostics.txt'", [StringComparison]::Ordinal)) "The negative package inspection did not report the unexpected entry. Output: $output"
-    New-Item -ItemType Directory -Path (Split-Path -Parent $wrongCopyrightPackage), (Split-Path -Parent $missingCopyrightPackage) -Force | Out-Null
+    New-Item -ItemType Directory -Path (Split-Path -Parent $wrongCopyrightPackage), (Split-Path -Parent $missingCopyrightPackage), (Split-Path -Parent $relativeReadmePackage) -Force | Out-Null
     Copy-Item -LiteralPath $PackagePath -Destination $wrongCopyrightPackage
     Invoke-NegativeInspection -Mutation Wrong -PackagePath $wrongCopyrightPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $missingCopyrightPackage
     Invoke-NegativeInspection -Mutation Missing -PackagePath $missingCopyrightPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
-    Write-Output 'Negative package inspection passed: unexpected entry and wrong/missing copyright metadata were rejected.'
+    Copy-Item -LiteralPath $PackagePath -Destination $relativeReadmePackage
+    Invoke-ReadmeLinkNegativeInspection -PackagePath $relativeReadmePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
+    Write-Output 'Negative package inspection passed: unexpected entry, wrong/missing copyright metadata, and relative unpacked README links were rejected.'
     exit 0
 }
 catch {
