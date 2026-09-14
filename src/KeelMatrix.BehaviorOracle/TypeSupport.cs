@@ -720,7 +720,7 @@ internal static class TypeSupport
                 return null;
             }
 
-            reason = AnalyzePublicParameterlessConstructor(type, visitingMethods, depth);
+            reason = AnalyzePublicConstructor(type, visitingTypes, visitingMethods, depth);
             return reason ?? AnalyzeEnumerableExecution(type, visitingMethods, depth);
         }
 
@@ -737,7 +737,7 @@ internal static class TypeSupport
 
         try
         {
-            var reason = AnalyzePublicParameterlessConstructor(type, visitingMethods, depth);
+            var reason = AnalyzePublicConstructor(type, visitingTypes, visitingMethods, depth);
             if (reason is not null)
             {
                 return reason;
@@ -855,19 +855,35 @@ internal static class TypeSupport
         }
     }
 
-    private static string? AnalyzePublicParameterlessConstructor(
+    private static string? AnalyzePublicConstructor(
         Type type,
+        HashSet<Type> visitingTypes,
         HashSet<MethodBase> visitingMethods,
         int depth)
     {
-        var constructor = type.GetConstructor(
-            BindingFlags.Public | BindingFlags.Instance,
-            binder: null,
-            Type.EmptyTypes,
-            modifiers: null);
+        var constructor = GetPublicConstructor(type);
         return constructor is null
             ? "no deterministic public construction path exists"
-            : AnalyzeMethod(constructor, visitingMethods, depth + 1);
+            : AnalyzeMethod(constructor, visitingMethods, depth + 1) ??
+              FirstUnsupportedConstructorParameter(constructor, visitingTypes, visitingMethods, depth);
+    }
+
+    private static string? FirstUnsupportedConstructorParameter(
+        ConstructorInfo constructor,
+        HashSet<Type> visitingTypes,
+        HashSet<MethodBase> visitingMethods,
+        int depth)
+    {
+        foreach (var parameter in constructor.GetParameters())
+        {
+            var reason = AnalyzeConstruction(parameter.ParameterType, visitingTypes, visitingMethods, depth + 1);
+            if (reason is not null)
+            {
+                return $"constructor parameter {parameter.Name ?? parameter.Position.ToString(CultureInfo.InvariantCulture)} is unsupported: {reason}";
+            }
+        }
+
+        return null;
     }
 
     private static string? AnalyzeMemberBody(
@@ -1016,12 +1032,116 @@ internal static class TypeSupport
                 candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>));
 
     public static bool HasConstructiblePublicPath(Type type) =>
-        type.IsValueType ||
-        type.GetConstructor(
-            BindingFlags.Public | BindingFlags.Instance,
-            binder: null,
-            Type.EmptyTypes,
-            modifiers: null) is not null;
+        CanConstructShape(type, new HashSet<Type>());
+
+    public static ConstructorInfo? GetPublicConstructor(Type type)
+    {
+        if (type.IsInterface || type.IsAbstract || type.IsPointer || type.IsByRef || type == typeof(void))
+        {
+            return null;
+        }
+
+        return type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .Where(constructor => constructor.GetParameters().All(parameter =>
+                CanConstructShape(parameter.ParameterType, new HashSet<Type> { type })))
+            .OrderBy(static constructor => constructor.GetParameters().Length)
+            .ThenBy(ConstructorSignature, StringComparer.Ordinal)
+            .FirstOrDefault();
+    }
+
+    private static bool CanConstructShape(Type type, HashSet<Type> visiting)
+    {
+        if (Nullable.GetUnderlyingType(type) is Type nullableType)
+        {
+            return CanConstructShape(nullableType, visiting);
+        }
+
+        if (type.IsByRef || type.IsPointer || type.IsFunctionPointer || type == typeof(void))
+        {
+            return false;
+        }
+
+        if (type.IsEnum || SimpleTypes.Contains(type) || type.IsValueType)
+        {
+            return true;
+        }
+
+        if (type.IsArray)
+        {
+            return type.GetArrayRank() == 1 && CanConstructShape(type.GetElementType()!, visiting);
+        }
+
+        if (TryGetBuiltInCollectionShape(type, out var elementType, out var keyType, out var valueType))
+        {
+            return keyType is null
+                ? CanConstructShape(elementType!, visiting)
+                : CanConstructShape(keyType, visiting) && CanConstructShape(valueType!, visiting);
+        }
+
+        if (!type.IsPublic && !type.IsNestedPublic || type.IsInterface || type.IsAbstract || !visiting.Add(type))
+        {
+            return false;
+        }
+
+        try
+        {
+            return type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .OrderBy(static constructor => constructor.GetParameters().Length)
+                .ThenBy(ConstructorSignature, StringComparer.Ordinal)
+                .Any(constructor => constructor.GetParameters().All(parameter =>
+                    CanConstructShape(parameter.ParameterType, visiting)));
+        }
+        finally
+        {
+            visiting.Remove(type);
+        }
+    }
+
+    private static string ConstructorSignature(ConstructorInfo constructor) =>
+        string.Join(",", constructor.GetParameters().Select(static parameter => TypeNames.For(parameter.ParameterType)));
+
+    private static bool TryGetBuiltInCollectionShape(
+        Type type,
+        out Type? elementType,
+        out Type? keyType,
+        out Type? valueType)
+    {
+        elementType = null;
+        keyType = null;
+        valueType = null;
+        if (!type.IsGenericType)
+        {
+            return false;
+        }
+
+        var definition = type.GetGenericTypeDefinition();
+        var arguments = type.GetGenericArguments();
+        if (arguments.Length == 1 &&
+            (definition == typeof(List<>) ||
+             definition == typeof(HashSet<>) ||
+             definition == typeof(IList<>) ||
+             definition == typeof(ICollection<>) ||
+             definition == typeof(IEnumerable<>) ||
+             definition == typeof(IReadOnlyCollection<>) ||
+             definition == typeof(IReadOnlyList<>) ||
+             definition == typeof(ISet<>)))
+        {
+            elementType = arguments[0];
+            return true;
+        }
+
+        if (arguments.Length == 2 &&
+            (definition == typeof(Dictionary<,>) ||
+             definition == typeof(IDictionary<,>) ||
+             definition == typeof(IReadOnlyDictionary<,>)))
+        {
+            keyType = arguments[0];
+            valueType = arguments[1];
+            return true;
+        }
+
+        return false;
+    }
 
     private static bool HasPublicAdd(Type type, Type elementType) =>
         type.GetMethod(

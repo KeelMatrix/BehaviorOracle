@@ -65,6 +65,48 @@ function Set-NuspecCopyright {
     }
 }
 
+function Set-NuspecDescription {
+    param([Parameter(Mandatory = $true)][string]$PackagePath)
+
+    $stream = [IO.File]::Open($PackagePath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    try {
+        $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Update, $false)
+        try {
+            $entry = $archive.GetEntry('KeelMatrix.BehaviorOracle.nuspec')
+            Assert-Test ($null -ne $entry) 'The synthetic package is missing its nuspec.'
+            $reader = [IO.StreamReader]::new($entry.Open())
+            try {
+                $nuspec = $reader.ReadToEnd()
+            }
+            finally {
+                $reader.Dispose()
+            }
+
+            $updatedNuspec = [regex]::Replace(
+                $nuspec,
+                '<description>.*?</description>',
+                '<description>Wrong package description.</description>',
+                [Text.RegularExpressions.RegexOptions]::Singleline)
+            Assert-Test ($updatedNuspec -cne $nuspec) 'The synthetic package nuspec did not contain a description element.'
+            $entry.Delete()
+            $newEntry = $archive.CreateEntry('KeelMatrix.BehaviorOracle.nuspec')
+            $writer = [IO.StreamWriter]::new($newEntry.Open(), [Text.UTF8Encoding]::new($false))
+            try {
+                $writer.Write($updatedNuspec)
+            }
+            finally {
+                $writer.Dispose()
+            }
+        }
+        finally {
+            $archive.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 function Set-PackageReadmeLink {
     param(
         [Parameter(Mandatory = $true)][string]$PackagePath,
@@ -167,6 +209,31 @@ function Invoke-NegativeInspection {
     else {
         Assert-Test ($output.Contains('Package metadata is missing the copyright.', [StringComparison]::Ordinal)) "The missing copyright was rejected without the expected diagnostic. Output: $output"
     }
+}
+
+function Invoke-DescriptionNegativeInspection {
+    param(
+        [Parameter(Mandatory = $true)][string]$PackagePath,
+        [Parameter(Mandatory = $true)][string]$SymbolsPath,
+        [Parameter(Mandatory = $true)][string]$InspectorPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedRepositoryCommit
+    )
+
+    Set-NuspecDescription -PackagePath $PackagePath
+    $arguments = @(
+        '-NoProfile',
+        '-File', $InspectorPath,
+        '-PackagePath', $PackagePath,
+        '-SymbolsPath', $SymbolsPath
+    )
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
+        $arguments += @('-ExpectedRepositoryCommit', $ExpectedRepositoryCommit)
+    }
+
+    $output = (& pwsh @arguments 2>&1 | Out-String).TrimEnd()
+    $exitCode = $LASTEXITCODE
+    Assert-Test ($exitCode -ne 0) 'The package inspector accepted a mismatched package description.'
+    Assert-Test ($output.Contains('Package description is incorrect.', [StringComparison]::Ordinal)) "The mismatched package description was rejected without the expected diagnostic. Output: $output"
 }
 
 function Invoke-ReadmeLinkNegativeInspection {
@@ -272,6 +339,7 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) "behaviororacle-package-inspect
 $mutatedPackage = Join-Path $testRoot 'KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $wrongCopyrightPackage = Join-Path $testRoot 'wrong-copyright\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $missingCopyrightPackage = Join-Path $testRoot 'missing-copyright\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
+$wrongDescriptionPackage = Join-Path $testRoot 'wrong-description\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $relativeReadmePackage = Join-Path $testRoot 'relative-readme\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $wrongReadmeSourcePackage = Join-Path $testRoot 'wrong-readme-source\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
 $missingReadmeContentPackage = Join-Path $testRoot 'missing-readme-content\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
@@ -317,18 +385,20 @@ try {
     $exitCode = $LASTEXITCODE
     Assert-Test ($exitCode -ne 0) 'The package inspector accepted an unexpected benign-looking archive entry.'
     Assert-Test ($output.Contains("unexpected archive entry 'tools/net8.0/any/diagnostics.txt'", [StringComparison]::Ordinal)) "The negative package inspection did not report the unexpected entry. Output: $output"
-    New-Item -ItemType Directory -Path (Split-Path -Parent $wrongCopyrightPackage), (Split-Path -Parent $missingCopyrightPackage), (Split-Path -Parent $relativeReadmePackage), (Split-Path -Parent $wrongReadmeSourcePackage), (Split-Path -Parent $missingReadmeContentPackage) -Force | Out-Null
+    New-Item -ItemType Directory -Path (Split-Path -Parent $wrongCopyrightPackage), (Split-Path -Parent $missingCopyrightPackage), (Split-Path -Parent $wrongDescriptionPackage), (Split-Path -Parent $relativeReadmePackage), (Split-Path -Parent $wrongReadmeSourcePackage), (Split-Path -Parent $missingReadmeContentPackage) -Force | Out-Null
     Copy-Item -LiteralPath $PackagePath -Destination $wrongCopyrightPackage
     Invoke-NegativeInspection -Mutation Wrong -PackagePath $wrongCopyrightPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $missingCopyrightPackage
     Invoke-NegativeInspection -Mutation Missing -PackagePath $missingCopyrightPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
+    Copy-Item -LiteralPath $PackagePath -Destination $wrongDescriptionPackage
+    Invoke-DescriptionNegativeInspection -PackagePath $wrongDescriptionPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $relativeReadmePackage
     Invoke-ReadmeLinkNegativeInspection -PackagePath $relativeReadmePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $wrongReadmeSourcePackage
     Invoke-ReadmeSourceNegativeInspection -PackagePath $wrongReadmeSourcePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $missingReadmeContentPackage
     Invoke-MissingReadmeContentNegativeInspection -PackagePath $missingReadmeContentPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
-    Write-Output 'Negative package inspection passed: unexpected entry, wrong/missing copyright metadata, relative unpacked README links, wrong README source, and missing README content were rejected.'
+    Write-Output 'Negative package inspection passed: unexpected entry, wrong/missing copyright metadata, mismatched description metadata, relative unpacked README links, wrong README source, and missing README content were rejected.'
     exit 0
 }
 catch {

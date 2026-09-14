@@ -41,7 +41,7 @@ Use `--format json` for a bounded, deterministic report. A result of `EQUIVALENT
 
 ## Important limitations
 
-- v1 covers a deliberately bounded deterministic domain: supported primitive, enum, string, nullable, array, common finite collection, and constructible object-graph inputs; synchronous and supported `Task<T>`/`ValueTask<T>` methods; return values, exception types, supported argument mutation, and supported public state.
+- v1 covers a deliberately bounded deterministic domain: supported primitive, enum, string, nullable, array, common finite collection, and constructible object-graph inputs; synchronous and supported `Task<T>`/`ValueTask<T>` methods; return values, exception types, supported argument mutation, and supported public state. Object graphs use public constructors selected by fewest parameters and then canonical parameter-type order, followed by writable public members; types without a legal deterministic path are skipped.
 - Filesystem, network, database, process/environment, GUI, native/unsafe, callback, concurrency, timing, random/cryptographic, opaque external-state, and other unsupported behavior is skipped or reported conservatively.
 - Both sides must be independently stable before a behavioral divergence is reported. Nondeterministic or unrepresentable observations are inconclusive.
 - A divergence is evidence that observable behavior differs; deciding whether it is intentional or a breaking change remains a maintainer decision.

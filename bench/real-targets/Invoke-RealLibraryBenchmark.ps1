@@ -3,14 +3,24 @@ param(
     [switch]$KeepScratch,
     [string]$ScratchDirectory,
     [switch]$AllowStableEvidenceChanges,
-    [string]$ToolPath
+    [string]$ToolPath,
+    [string]$MetadataPath,
+    [string]$ConfigPath
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$metadataPath = Join-Path $PSScriptRoot 'targets.json'
-$configPath = Join-Path $PSScriptRoot 'config.json'
+$metadataPath = if ([string]::IsNullOrWhiteSpace($MetadataPath)) {
+    Join-Path $PSScriptRoot 'targets.json'
+} else {
+    (Resolve-Path -LiteralPath $MetadataPath).Path
+}
+$configPath = if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+    Join-Path $PSScriptRoot 'config.json'
+} else {
+    (Resolve-Path -LiteralPath $ConfigPath).Path
+}
 $rawResultsDirectory = Join-Path $repo 'bench\results\real-targets'
 $committedSummaryPath = Join-Path $rawResultsDirectory 'summary.json'
 $toolPath = if ([string]::IsNullOrWhiteSpace($ToolPath)) {
@@ -314,6 +324,21 @@ function Assert-StableEvidence {
 }
 
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+$scenarioBudget = 0
+$confirmationRuns = 0
+try {
+    $scenarioBudget = [int]$config.scenarioBudget
+    $confirmationRuns = [int]$config.confirmationRuns
+} catch {
+    throw 'Real-library benchmark configuration must contain integer scenario and confirmation budgets.'
+}
+if ($config.version -ne 1 -or
+    $scenarioBudget -lt 1 -or
+    $scenarioBudget -gt 32 -or
+    $confirmationRuns -lt 1 -or
+    $confirmationRuns -gt 3) {
+    throw 'Real-library benchmark configuration must be version 1 with a scenario budget from 1 through 32 and confirmation runs from 1 through 3.'
+}
 $toolHash = (Get-FileHash -LiteralPath $toolPath -Algorithm SHA512).Hash
 $environment = [ordered]@{
     osDescription = [Runtime.InteropServices.RuntimeInformation]::OSDescription

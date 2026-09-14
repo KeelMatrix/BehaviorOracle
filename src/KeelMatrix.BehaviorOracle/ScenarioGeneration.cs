@@ -45,7 +45,30 @@ internal sealed class ScenarioGenerator
                         variant);
                 })
                 .ToArray();
-            scenarios.Add(new GeneratedScenario(index, seed, arguments));
+            var scenario = new GeneratedScenario(index, seed, arguments);
+            if (!method.IsStatic)
+            {
+                var receiverVariant = index < 3
+                    ? index + 1
+                    : unchecked((int)(random.NextUInt64() & 0x7FFFFFFFUL));
+                if (receiverVariant % 13 == 0)
+                {
+                    receiverVariant++;
+                }
+
+                scenario = scenario with
+                {
+                    Receiver = GeneratedValueFactory.Create(
+                        method.DeclaringType!,
+                        random.Fork(-1),
+                        depth: 0,
+                        maxDepth: DefaultMaxDepth,
+                        maxCollectionItems: DefaultMaxCollectionItems,
+                        variant: receiverVariant)
+                };
+            }
+
+            scenarios.Add(scenario);
         }
 
         return scenarios;
@@ -301,16 +324,29 @@ internal static class GeneratedValueFactory
 
         if (depth >= maxDepth)
         {
+            var boundedConstructor = TypeSupport.GetPublicConstructor(type);
             return new GeneratedValue
             {
                 Kind = GeneratedValueKind.Object,
                 TypeName = TypeNames.For(type),
+                ConstructorArguments = boundedConstructor is null || boundedConstructor.GetParameters().Length == 0
+                    ? null
+                    : boundedConstructor.GetParameters()
+                        .Select((parameter, index) => CreateBounded(
+                            parameter.ParameterType,
+                            random.Fork(index),
+                            depth + 1,
+                            maxDepth,
+                            maxCollectionItems,
+                            variant + index + 1))
+                        .ToArray(),
                 Members = new Dictionary<string, GeneratedValue>(StringComparer.Ordinal)
             };
         }
 
         if (TypeSupport.HasConstructiblePublicPath(type))
         {
+            var constructor = TypeSupport.GetPublicConstructor(type);
             var members = new Dictionary<string, GeneratedValue>(StringComparer.Ordinal);
             foreach (var member in TypeSupport.WritableMembers(type))
             {
@@ -325,11 +361,38 @@ internal static class GeneratedValueFactory
             {
                 Kind = GeneratedValueKind.Object,
                 TypeName = TypeNames.For(type),
+                ConstructorArguments = constructor is null || constructor.GetParameters().Length == 0
+                    ? null
+                    : constructor.GetParameters()
+                        .Select((parameter, index) => Create(
+                            parameter.ParameterType,
+                            random.Fork(index),
+                            depth + 1,
+                            maxDepth,
+                            maxCollectionItems,
+                            variant + index + 1))
+                        .ToArray(),
                 Members = members
             };
         }
 
         return GeneratedValue.Null(TypeNames.For(type));
+    }
+
+    private static GeneratedValue CreateBounded(
+        Type type,
+        DeterministicRandom random,
+        int depth,
+        int maxDepth,
+        int maxCollectionItems,
+        int variant)
+    {
+        if (depth > maxDepth && !type.IsValueType)
+        {
+            return GeneratedValue.Null(TypeNames.For(type));
+        }
+
+        return Create(type, random, depth, maxDepth, maxCollectionItems, variant);
     }
 
     private static GeneratedValue StringValue(int variant)

@@ -7,19 +7,21 @@ Generated scenarios: 80
 Stable scenarios: 80
 Behavioral divergences: 35
 Unsupported/inconclusive scenarios: 0
-Median comparison time: 1027.1 ms
-Median witness-minimization time: 974.7 ms
+Median comparison time: 798.6 ms
+Median witness-minimization time: 790.3 ms
 Seed: 12345
 
 API:
   BehaviorOracleCorpus.Calculator::Apply(BehaviorOracleCorpus.Order)->System.Int32
 Input witness:
+  receiver = {}
   arg0 = {Label: " ", Total: 100}
 Baseline:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"argumentsAfter":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"receiverAfter":{"kind":"object","typeName":"BehaviorOracleCorpus.Calculator","scalar":null,"items":null,"members":{"Offset":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}}},"isRepresentable":true}
 Candidate:
   {"outcome":"returned","returnValue":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null},"exceptionType":null,"argumentsBefore":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"argumentsAfter":[{"kind":"object","typeName":"BehaviorOracleCorpus.Order","scalar":null,"items":null,"members":{"Label":{"kind":"scalar","typeName":"System.String","scalar":" ","items":null,"members":null},"Total":{"kind":"scalar","typeName":"System.Int32","scalar":"100","items":null,"members":null}}}],"receiverAfter":{"kind":"object","typeName":"BehaviorOracleCorpus.Calculator","scalar":null,"items":null,"members":{"Offset":{"kind":"scalar","typeName":"System.Int32","scalar":"0","items":null,"members":null}}},"isRepresentable":true}
 Minimized witness:
+  receiver = {}
   arg0 = {Total: 100}
 Reproduce with seed: 12345
 This is evidence of a behavioral difference, not an automatic breaking-change judgment.

@@ -30,6 +30,64 @@ public sealed class GraphFixture
     public string? Name { get; set; }
 }
 
+public sealed class ParameterizedConstructorFixture
+{
+    public ParameterizedConstructorFixture(int amount)
+    {
+        Amount = amount;
+    }
+
+    public int Amount { get; }
+}
+
+public sealed class MixedConstructorPropertyFixture
+{
+    public MixedConstructorPropertyFixture(int amount)
+    {
+        Amount = amount;
+    }
+
+    public int Amount { get; }
+    public string? Label { get; set; }
+}
+
+public sealed class AmbiguousConstructorFixture
+{
+    public AmbiguousConstructorFixture(string value)
+    {
+        Value = value.Length;
+    }
+
+    public AmbiguousConstructorFixture(int value)
+    {
+        Value = value;
+    }
+
+    public int Value { get; }
+}
+
+public sealed class NoLegalConstructorFixture
+{
+    public NoLegalConstructorFixture(Stream value)
+    {
+        Value = value;
+    }
+
+    public Stream Value { get; }
+}
+
+public sealed class ParameterizedReceiverFixture
+{
+    public ParameterizedReceiverFixture(int offset)
+    {
+        Offset = offset;
+    }
+
+    public int Offset { get; }
+
+    public int Add(int value) => value + Offset;
+}
+
 public enum SignedFixtureValue
 {
     Negative = -1,
@@ -160,6 +218,12 @@ public static class ProbeFixture
     public static string FromStream(Stream value) => value.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public static string Normalize(string? value) => value?.Trim() ?? "default";
+
+    public static int ReadParameterized(ParameterizedConstructorFixture value) => value.Amount;
+
+    public static int ReadMixed(MixedConstructorPropertyFixture value) => value.Amount + (value.Label?.Length ?? 0);
+
+    public static int ReadNoLegal(NoLegalConstructorFixture value) => (int)value.Value.Length;
 
     public static int MutableStaticState() => ++mutableState;
 
@@ -548,6 +612,106 @@ public sealed class ScenarioGenerationTests
         Assert.NotNull(value.Members);
         Assert.True(value.Members!.Count <= 2);
         Assert.True(new GeneratedScenario(0, 4, [value]).Size < 100);
+    }
+
+    [Fact]
+    public void Parameterized_constructor_only_types_are_generated_and_instantiated()
+    {
+        var value = GeneratedValueFactory.Create(
+            typeof(ParameterizedConstructorFixture),
+            new DeterministicRandom(10),
+            depth: 0,
+            maxDepth: 3,
+            maxCollectionItems: 4,
+            variant: 1);
+
+        Assert.Equal(GeneratedValueKind.Object, value.Kind);
+        Assert.Single(value.ConstructorArguments!);
+        var instance = Assert.IsType<ParameterizedConstructorFixture>(
+            ValueInstantiator.Create(value, typeof(ParameterizedConstructorFixture)));
+        Assert.Equal(value.ConstructorArguments![0].IntegerValue, instance.Amount);
+    }
+
+    [Fact]
+    public void Mixed_constructor_and_writable_property_state_is_supported()
+    {
+        var value = GeneratedValueFactory.Create(
+            typeof(MixedConstructorPropertyFixture),
+            new DeterministicRandom(11),
+            depth: 0,
+            maxDepth: 3,
+            maxCollectionItems: 4,
+            variant: 1);
+
+        Assert.Single(value.ConstructorArguments!);
+        Assert.Contains(nameof(MixedConstructorPropertyFixture.Label), value.Members!.Keys);
+        var instance = Assert.IsType<MixedConstructorPropertyFixture>(
+            ValueInstantiator.Create(value, typeof(MixedConstructorPropertyFixture)));
+        Assert.Equal(value.ConstructorArguments![0].IntegerValue, instance.Amount);
+    }
+
+    [Fact]
+    public void Multiple_public_constructors_use_the_same_deterministic_tie_breaker()
+    {
+        var first = GeneratedValueFactory.Create(
+            typeof(AmbiguousConstructorFixture),
+            new DeterministicRandom(12),
+            depth: 0,
+            maxDepth: 3,
+            maxCollectionItems: 4,
+            variant: 1);
+        var second = GeneratedValueFactory.Create(
+            typeof(AmbiguousConstructorFixture),
+            new DeterministicRandom(99),
+            depth: 0,
+            maxDepth: 3,
+            maxCollectionItems: 4,
+            variant: 1);
+
+        Assert.Single(first.ConstructorArguments!);
+        Assert.Equal(GeneratedValueKind.Integer, first.ConstructorArguments![0].Kind);
+        Assert.Equal(ObservationCodec.Serialize(first.ConstructorArguments), ObservationCodec.Serialize(second.ConstructorArguments));
+    }
+
+    [Fact]
+    public void Types_with_no_legal_public_constructor_path_are_unsupported()
+    {
+        var supportedMethod = typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.ReadParameterized))!;
+        Assert.Null(TypeSupport.UnsupportedReason(supportedMethod));
+        var unsupportedMethod = typeof(ProbeFixture).GetMethod(nameof(ProbeFixture.ReadNoLegal))!;
+        Assert.NotNull(TypeSupport.UnsupportedReason(unsupportedMethod));
+
+        var noPath = typeof(NoLegalConstructorFixture).GetConstructor([typeof(Stream)]);
+        Assert.NotNull(noPath);
+        Assert.False(TypeSupport.HasConstructiblePublicPath(typeof(NoLegalConstructorFixture)));
+        Assert.Contains("construction", TypeSupport.UnsupportedReason(typeof(NoLegalConstructorFixture)), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Parameterized_instance_receivers_are_generated_and_executed()
+    {
+        var method = typeof(ParameterizedReceiverFixture).GetMethod(nameof(ParameterizedReceiverFixture.Add))!;
+        var descriptor = new ApiDescriptor(
+            TypeNames.Method(method),
+            TypeNames.For(typeof(ParameterizedReceiverFixture)),
+            method.Name,
+            typeof(ParameterizedReceiverFixture).Assembly.Location,
+            IsStatic: false,
+            IsConstructor: false,
+            method.GetParameters().Select(parameter => TypeNames.For(parameter.ParameterType)).ToArray(),
+            TypeNames.For(method.ReturnType),
+            UnsupportedReason: null);
+
+        var scenario = Assert.Single(ScenarioGenerator.Generate(descriptor, 1, 13));
+        Assert.NotNull(scenario.Receiver);
+        var response = await new WorkerRunner().ExecuteAsync(
+            typeof(ParameterizedReceiverFixture).Assembly.Location,
+            TypeNames.Method(method),
+            scenario,
+            new ProbeOptions(ConfirmationRuns: 1));
+
+        Assert.True(response.Success, response.FailureCategory);
+        Assert.True(response.Observation?.ReturnValue is not null, $"Outcome={response.Observation?.Outcome}; Exception={response.Observation?.ExceptionType}");
     }
 
     [Fact]

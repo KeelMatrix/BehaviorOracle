@@ -129,7 +129,7 @@ BehaviorOracle currently generates and observes:
 - public instance methods on constructible public classes and structs;
 - synchronous methods plus `Task<T>` and `ValueTask<T>` when their values fit the supported domain;
 - primitives, enums, strings, nullable values, one-dimensional arrays, and common finite collection shapes;
-- shallow bounded POCO graphs created through public constructors and writable public members;
+- shallow bounded POCO graphs created through public constructors and writable public members; constructor selection is deterministic (fewest parameters first, then canonical parameter-type order), and types without a legal path are skipped;
 - deterministic return values, deterministic exception types, supported argument mutation, and supported public object state after execution.
 
 Generation is deterministic from the explicit seed. The built-in corpus includes boundary numeric values, empty and bounded strings, Unicode, bounded collections, enum values, and bounded object variants. Recursion, collection size, observation depth, output, worker time, scenario count, and minimization attempts are bounded.

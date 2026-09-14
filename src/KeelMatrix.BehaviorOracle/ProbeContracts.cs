@@ -44,6 +44,8 @@ internal sealed record GeneratedValue
     public ulong? UnsignedIntegerValue { get; init; }
     public double FloatingPointValue { get; init; }
     public string? TextValue { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<GeneratedValue>? ConstructorArguments { get; init; }
     public IReadOnlyList<GeneratedValue>? Items { get; init; }
     public IReadOnlyDictionary<string, GeneratedValue>? Members { get; init; }
 
@@ -55,7 +57,10 @@ internal sealed record GeneratedScenario(
     long Seed,
     IReadOnlyList<GeneratedValue> Arguments)
 {
-    public int Size => Arguments.Sum(static argument => ValueSize(argument));
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GeneratedValue? Receiver { get; init; }
+
+    public int Size => (Receiver is null ? 0 : ValueSize(Receiver)) + Arguments.Sum(static argument => ValueSize(argument));
 
     private static int ValueSize(GeneratedValue value)
     {
@@ -68,6 +73,11 @@ internal sealed record GeneratedScenario(
         if (value.Items is not null)
         {
             size += value.Items.Sum(ValueSize);
+        }
+
+        if (value.ConstructorArguments is not null)
+        {
+            size += value.ConstructorArguments.Sum(ValueSize);
         }
 
         if (value.Members is not null)
@@ -134,7 +144,8 @@ internal sealed record WorkerRequest(
     string WorkingDirectory,
     int MaxObservationDepth = 6,
     int MaxObservationNodes = 512,
-    int MaxCollectionItems = 32);
+    int MaxCollectionItems = 32,
+    GeneratedValue? Receiver = null);
 
 internal sealed record WorkerResponse(
     bool Success,

@@ -53,6 +53,14 @@ internal sealed class WitnessMinimizer
 
     private static IEnumerable<GeneratedScenario> Shrink(GeneratedScenario scenario)
     {
+        if (scenario.Receiver is not null)
+        {
+            foreach (var receiver in ShrinkValue(scenario.Receiver))
+            {
+                yield return scenario with { Receiver = receiver };
+            }
+        }
+
         for (var argumentIndex = 0; argumentIndex < scenario.Arguments.Count; argumentIndex++)
         {
             foreach (var value in ShrinkValue(scenario.Arguments[argumentIndex]))
@@ -144,6 +152,19 @@ internal sealed class WitnessMinimizer
 
                 break;
             case GeneratedValueKind.Object:
+                if (value.ConstructorArguments is { Count: > 0 })
+                {
+                    foreach (var index in Enumerable.Range(0, value.ConstructorArguments.Count))
+                    {
+                        foreach (var argument in ShrinkValue(value.ConstructorArguments[index]))
+                        {
+                            var constructorArguments = value.ConstructorArguments.ToArray();
+                            constructorArguments[index] = argument;
+                            yield return value with { ConstructorArguments = constructorArguments };
+                        }
+                    }
+                }
+
                 if (value.Members is { Count: > 0 })
                 {
                     foreach (var name in value.Members.Keys.OrderBy(static name => name, StringComparer.Ordinal))

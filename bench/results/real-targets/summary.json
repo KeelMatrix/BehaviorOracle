@@ -7,7 +7,7 @@
     "scenarioBudget": 32,
     "confirmationRuns": 3
   },
-  "engineAssemblySha512": "62EAE81D07953A57B28AA4FD1ED04920885B3F043F888EFE36DCAB13C51AEECEB1FEA065DCDEAC423A4BDEC04D00421FAFD5986B3658EE68FB04C6C4723992C0",
+  "engineAssemblySha512": "8611C9B7CD090153E386D4120A4FFB1E9D593A0807F7D628F3A2C24951D75F902312180AF87E68B8A402BA7C04712C06C74C94FA1E2E7E35ACB8A2574B50AABD",
   "engineBuildContract": {
     "configuration": "Release",
     "targetFramework": "net8.0",
@@ -104,7 +104,7 @@
       "dependencies": [],
       "reportPath": "bench/results/real-targets/humanizer-core.json",
       "consolePath": "bench/results/real-targets/humanizer-core.console.txt",
-      "reportSha512": "8F6AAC016F9A0F6658F9743FB6FE634B3B5C07CAE0F13943E77EF453424C96CE50DDDBDECEB301FED14527BFBCBEC1FD53AAE667A0219832C11AC8133228F07E",
+      "reportSha512": "E757C1B1F5691A4097B426327DBD0D600D0DA6D741667ECE93B671FDB38BE184CA857B1557B2C844F44EF8BDF710F2D0ABC58099FD2FD06F49210F37693D4B16",
       "report": {
         "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
         "trustworthy": true,
@@ -127,10 +127,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 922.5,
+        "consoleMedianComparisonMilliseconds": 930.8,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 29915.6,
-        "repeatJsonProcessWallClockMilliseconds": 29186.5
+        "jsonProcessWallClockMilliseconds": 31924.4,
+        "repeatJsonProcessWallClockMilliseconds": 31727.9
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -166,7 +166,7 @@
       "dependencies": [],
       "reportPath": "bench/results/real-targets/newtonsoft-json.json",
       "consolePath": "bench/results/real-targets/newtonsoft-json.console.txt",
-      "reportSha512": "6417725F324FC34412B7431BB431631C272DE3E3A4DE6DE81323E7EF587097EBB844B2E0543E512B66CCBFAF9F373AE74D10FAD17D13A26FEA0E49D992A9006C",
+      "reportSha512": "5A40FBF0F61973FFF3F007E9760F7678283A950DEA48481189C44CD834E891084418F89A4DE09E4D5D8B749847C9C1F1C949D3854D6E2458596DBCCB5F4307C5",
       "report": {
         "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
         "trustworthy": true,
@@ -189,10 +189,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 947.8,
+        "consoleMedianComparisonMilliseconds": 979.1,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 29002.9,
-        "repeatJsonProcessWallClockMilliseconds": 29186.1
+        "jsonProcessWallClockMilliseconds": 31871.2,
+        "repeatJsonProcessWallClockMilliseconds": 33001.1
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,
@@ -235,22 +235,22 @@
       ],
       "reportPath": "bench/results/real-targets/npgsql.json",
       "consolePath": "bench/results/real-targets/npgsql.console.txt",
-      "reportSha512": "1FC62CC4249E40F40F7A55A99E72200490BE619584D14DE4475FD383C9E2B0B1B90AECE33DB6D2830965A8CFCB55E0497D9DACD369750784130BDAD859F6AE06",
+      "reportSha512": "2B4C4BB0F9D572B8DDD878A7B35BE8955726B83B6DF2CFCBD3BDFC3033912BDDBB05B57DE061C55C00F1C07C1D7E7F0EE2FC8061950A165B85BEAA5C33C309B9",
       "report": {
         "resultState": "EQUIVALENT_WITHIN_TESTED_DOMAIN",
         "trustworthy": true,
         "discoveredBaselineApis": 838,
         "discoveredCandidateApis": 839,
         "matchedCallableApis": 838,
-        "eligibleSupportedApiPairs": 4,
-        "supportedApiPercentage": 0.47732696897374705,
-        "exercisedApiCount": 4,
+        "eligibleSupportedApiPairs": 28,
+        "supportedApiPercentage": 3.341288782816229,
+        "exercisedApiCount": 28,
         "generatedScenarios": 32,
         "stableScenarios": 32,
         "divergenceCount": 0,
         "inconclusiveCount": 0,
         "unsupportedCount": 0,
-        "unsupportedApiCount": 834,
+        "unsupportedApiCount": 810,
         "unsupportedOrInconclusiveRate": 0,
         "executionFailureCount": 0
       },
@@ -258,10 +258,10 @@
       "precision": null,
       "recall": null,
       "timings": {
-        "consoleMedianComparisonMilliseconds": 926.2,
+        "consoleMedianComparisonMilliseconds": 1085.7,
         "consoleMedianMinimizationMilliseconds": null,
-        "jsonProcessWallClockMilliseconds": 30051.7,
-        "repeatJsonProcessWallClockMilliseconds": 29757.5
+        "jsonProcessWallClockMilliseconds": 35447.3,
+        "repeatJsonProcessWallClockMilliseconds": 34935.2
       },
       "reproducibility": {
         "repeatedJsonExitCode": 0,

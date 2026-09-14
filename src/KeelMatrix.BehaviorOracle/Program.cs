@@ -142,14 +142,20 @@ internal static class Program
 
     private static string FormatWitness(GeneratedScenario scenario)
     {
-        if (scenario.Arguments.Count == 0)
+        var lines = new List<string>();
+        if (scenario.Receiver is not null)
         {
-            return "  (no arguments)";
+            lines.Add($"  receiver = {FormatValue(scenario.Receiver, 0)}");
         }
 
-        return string.Join(
-            Environment.NewLine,
-            scenario.Arguments.Select((argument, index) => $"  arg{index} = {FormatValue(argument, 0)}"));
+        if (scenario.Arguments.Count == 0)
+        {
+            lines.Add("  (no arguments)");
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        lines.AddRange(scenario.Arguments.Select((argument, index) => $"  arg{index} = {FormatValue(argument, 0)}"));
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static string FormatValue(GeneratedValue value, int depth)
@@ -169,9 +175,21 @@ internal static class Program
             GeneratedValueKind.String => JsonSerializer.Serialize(value.TextValue ?? string.Empty),
             GeneratedValueKind.Enum => value.TextValue ?? "<enum>",
             GeneratedValueKind.Collection => "[" + string.Join(", ", (value.Items ?? []).Take(16).Select(item => FormatValue(item, depth + 1))) + "]",
-            GeneratedValueKind.Object => "{" + string.Join(", ", (value.Members ?? new Dictionary<string, GeneratedValue>()).OrderBy(pair => pair.Key, StringComparer.Ordinal).Take(16).Select(pair => $"{pair.Key}: {FormatValue(pair.Value, depth + 1)}")) + "}",
+            GeneratedValueKind.Object => FormatObject(value, depth),
             _ => "<unknown>"
         };
+    }
+
+    private static string FormatObject(GeneratedValue value, int depth)
+    {
+        var constructorArguments = value.ConstructorArguments is null
+            ? string.Empty
+            : "new (" + string.Join(", ", value.ConstructorArguments.Take(16).Select(argument => FormatValue(argument, depth + 1))) + ") ";
+        var members = "{" + string.Join(", ", (value.Members ?? new Dictionary<string, GeneratedValue>())
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Take(16)
+            .Select(pair => $"{pair.Key}: {FormatValue(pair.Value, depth + 1)}")) + "}";
+        return constructorArguments + members;
     }
 
     private static void PrintHelp()

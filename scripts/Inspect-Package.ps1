@@ -21,7 +21,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $packageId = 'KeelMatrix.BehaviorOracle'
 $toolCommand = 'behavior-oracle'
-$description = 'Compare two .NET library builds with deterministic scenarios and receive a minimized witness when stable behavior diverges.'
+$description = 'Compare two .NET library versions with deterministic generated scenarios and get a minimized witness when behavior changes despite compatible API signatures.'
 $tags = 'dotnet compatibility semantic-versioning regression-testing differential-testing testing nuget ci dotnet-tool'
 $dependencyId = 'KeelMatrix.Telemetry'
 $dependencyVersion = '0.1.0'

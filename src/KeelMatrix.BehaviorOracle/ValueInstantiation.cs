@@ -123,8 +123,38 @@ internal static class ValueInstantiator
             throw new ValueInstantiationException($"no object construction path exists for {expectedType.FullName}");
         }
 
-        var instance = Activator.CreateInstance(expectedType) ??
-            throw new ValueInstantiationException($"constructor returned null for {expectedType.FullName}");
+        object instance;
+        var constructor = TypeSupport.GetPublicConstructor(expectedType);
+        if (constructor is null)
+        {
+            instance = Activator.CreateInstance(expectedType) ??
+                throw new ValueInstantiationException($"constructor returned null for {expectedType.FullName}");
+        }
+        else
+        {
+            var parameters = constructor.GetParameters();
+            var generatedArguments = value.ConstructorArguments ?? [];
+            if (generatedArguments.Count != parameters.Length)
+            {
+                throw new ValueInstantiationException($"constructor argument count does not match {expectedType.FullName}");
+            }
+
+            try
+            {
+                instance = constructor.Invoke(parameters
+                    .Select((parameter, index) => Create(generatedArguments[index], parameter.ParameterType, depth + 1))
+                    .ToArray());
+            }
+            catch (TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                throw new ValueInstantiationException($"public constructor rejected generated input for {expectedType.FullName}");
+            }
+            catch (Exception exception) when (exception is ArgumentException or MemberAccessException or InvalidOperationException)
+            {
+                throw new ValueInstantiationException($"public constructor could not be invoked for {expectedType.FullName}");
+            }
+        }
+
         foreach (var member in TypeSupport.WritableMembers(expectedType))
         {
             if (value.Members is null || !value.Members.TryGetValue(member.Name, out var generated))

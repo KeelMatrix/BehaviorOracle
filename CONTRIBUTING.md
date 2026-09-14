@@ -14,7 +14,17 @@ Changes to CLI options, configuration, report states, exit codes, or supported s
 
 ## Validate locally
 
-Use the commands in [`AGENTS.md`](AGENTS.md) for the repository CI-equivalent path. They cover restore, Release build, tests, formatting, the synthetic benchmark, package inspection, isolated package-consumer smoke, and dependency auditing.
+Use the commands in [`AGENTS.md`](AGENTS.md) for the repository CI-equivalent path. They cover restore, Release build, tests, formatting, the synthetic benchmark, the bounded pinned real-library subset, package inspection, isolated package-consumer smoke, and dependency auditing.
+
+After the Release build, run the real-library subset and its fail-closed contract check:
+
+```powershell
+$env:KEELMATRIX_NO_TELEMETRY = '1'
+pwsh -NoProfile -File .\bench\real-targets\Invoke-RealLibraryBenchmark.ps1
+pwsh -NoProfile -File .\bench\real-targets\Test-RealLibraryBenchmark.ps1
+```
+
+The benchmark uses the three package version/SHA-512 pairs committed in `bench/real-targets/targets.json`, a 32-scenario maximum, three confirmation runs, a five-minute per-comparison bound, and bounded output capture. It fails closed when package retrieval, hash validation, asset extraction, comparison, reproducibility, or committed stable evidence validation fails. The contract check deliberately supplies an over-budget configuration and verifies rejection.
 
 ## Validate a local build
 

@@ -1,11 +1,11 @@
 EQUIVALENT WITHIN TESTED DOMAIN
 Matched callable APIs: 838
-Eligible supported API pairs: 4
-APIs actually exercised: 4
-Unsupported APIs: 834
+Eligible supported API pairs: 28
+APIs actually exercised: 28
+Unsupported APIs: 810
 Generated scenarios: 32
 Stable scenarios: 32
 Behavioral divergences: 0
 Unsupported/inconclusive scenarios: 0
-Median comparison time: 926.2 ms
+Median comparison time: 1085.7 ms
 Seed: 12345

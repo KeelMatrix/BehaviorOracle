@@ -22,7 +22,10 @@ dotnet build KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore 
   -p:AssemblyVersion=0.1.0.0 -p:FileVersion=0.1.0.0
 pwsh -NoProfile -File .\scripts\Test-EngineReproducibility.ps1 -Commit $commit
 pwsh -NoProfile -File .\bench\real-targets\Invoke-RealLibraryBenchmark.ps1
+pwsh -NoProfile -File .\bench\real-targets\Test-RealLibraryBenchmark.ps1
 ```
+
+The contract check validates the three pinned targets and the scenario/confirmation bounds, then runs an over-budget configuration and requires the benchmark to fail closed. The benchmark itself also fails closed for missing or hash-mismatched packages, failed comparisons, changed stable evidence, non-reproducible repeated JSON, or output/time-bound violations.
 
 ## Engine provenance
 
@@ -69,11 +72,11 @@ The full baseline/candidate package SHA-512 values are committed alongside these
 
 | Target | Result | Discovered baseline/candidate | Matched | Supported pairs | Supported % | Exercised | Generated/stable | Divergences | Inconclusive | Unsupported APIs | Median comparison | Repeated JSON |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Humanizer.Core | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 392 / 414 | 392 | 25 | 6.38% | 25 | 32 / 32 | 0 | 0 | 367 | 922.5 ms | byte-identical |
-| Newtonsoft.Json | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 687 / 687 | 687 | 1 | 0.15% | 1 | 32 / 32 | 0 | 0 | 686 | 947.8 ms | byte-identical |
-| Npgsql | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 838 / 839 | 838 | 4 | 0.48% | 4 | 32 / 32 | 0 | 0 | 834 | 926.2 ms | byte-identical |
+| Humanizer.Core | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 392 / 414 | 392 | 25 | 6.38% | 25 | 32 / 32 | 0 | 0 | 367 | 784.2 ms | byte-identical |
+| Newtonsoft.Json | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 687 / 687 | 687 | 1 | 0.15% | 1 | 32 / 32 | 0 | 0 | 686 | 820.6 ms | byte-identical |
+| Npgsql | `EQUIVALENT_WITHIN_TESTED_DOMAIN` | 838 / 839 | 838 | 28 | 3.34% | 28 | 32 / 32 | 0 | 0 | 810 | 899.9 ms | byte-identical |
 
-The real targets exercised 30 supported API pairs and produced 96 stable scenarios without any mandatory custom generation. The deterministic transformation target supplied 25 automatically exercised APIs. The more complex serialization target was intentionally reported honestly at one supported API. Npgsql supplied four conservatively supported API pairs with no inconclusive scenarios or divergence; interface-typed enumerable returns remain outside the execution domain rather than being forced through network/database state.
+The real targets exercised 54 supported API pairs and produced 96 stable scenarios without any mandatory custom generation. The deterministic transformation target supplied 25 automatically exercised APIs. The more complex serialization target was intentionally reported honestly at one supported API. Npgsql supplied 28 conservatively supported API pairs with no inconclusive scenarios or divergence; interface-typed enumerable returns remain outside the execution domain rather than being forced through network/database state.
 
 Real-target minimization is not applicable because no stable real divergence was found. Synthetic truth-labeled evidence supplies the minimization measurement: 35/35 detected planted divergences had minimized witnesses, with median input size 1, median minimized size 1, median reduction 0, and smallest witness size 0; the console artifact records the bounded timing.
 
@@ -85,9 +88,9 @@ Real-target minimization is not applicable because no stable real divergence was
 | At least 70% recall on supported planted changes | **PASS** | Synthetic corpus: 35/35 expected divergence scenarios detected, 100% recall. |
 | No recurring false-positive class requiring domain-specific suppression | **PASS** | Synthetic corpus: 0 false divergence scenarios; hidden time/randomness/external-state cases were skipped. Real pairs produced 0 divergences. |
 | Useful minimized witnesses for most detected simple divergences | **PASS** | 35/35 synthetic divergence records include minimized witnesses; console output shows API, input, both observations, minimized witness, and seed. No real divergence was available to score. |
-| Bounded runtime suitable for ordinary CI | **PASS** | Synthetic median comparison: 822.9 ms for 80 scenarios; real-target per-scenario medians: 922.5–947.8 ms, with bounded end-to-end JSON runs of about 29.0–30.1 s per 32-scenario target. |
+| Bounded runtime suitable for ordinary CI | **PASS** | Synthetic median comparison: 822.9 ms for 80 scenarios; real-target per-scenario medians: 784.2–899.9 ms, with bounded end-to-end JSON runs of about 25.9–29.2 s per 32-scenario target. |
 | Conservative deterministic/nondeterministic classification | **PASS** | Synthetic unsupported state cases are skipped; Npgsql now conservatively excludes interface-typed enumerable returns and reports 0 inconclusive scenarios and 0 divergences. Repeated JSON output is byte-identical for all three targets. |
-| Meaningful real-library value without mandatory custom factories/generators | **PASS (narrow domain)** | 30 real API pairs were exercised automatically and 96 scenarios were stable; 25 Humanizer APIs received deterministic comparison without custom setup. Coverage is intentionally low on the complex and out-of-domain targets and remains an explicit limitation. |
+| Meaningful real-library value without mandatory custom factories/generators | **PASS (narrow domain)** | 54 real API pairs were exercised automatically and 96 scenarios were stable; 25 Humanizer APIs received deterministic comparison without custom setup. Coverage is intentionally low on the complex and out-of-domain targets and remains an explicit limitation. |
 
 ## Conclusion
 

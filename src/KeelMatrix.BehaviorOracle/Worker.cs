@@ -84,16 +84,12 @@ internal static class WorkerHost
             object? receiver = null;
             if (!method.IsStatic)
             {
-                if (!TypeSupport.HasConstructiblePublicPath(method.DeclaringType!))
+                if (request.Receiver is null || !TypeSupport.HasConstructiblePublicPath(method.DeclaringType!))
                 {
                     return new WorkerResponse(false, null, "receiver-not-constructible");
                 }
 
-                receiver = Activator.CreateInstance(method.DeclaringType!);
-                if (receiver is null)
-                {
-                    return new WorkerResponse(false, null, "receiver-construction-failed");
-                }
+                receiver = ValueInstantiator.Create(request.Receiver, method.DeclaringType!);
             }
 
             object? returned;
@@ -238,7 +234,8 @@ internal sealed class WorkerRunner
                 tempPath,
                 options.MaxObservationDepth,
                 options.MaxObservationNodes,
-                options.MaxCollectionItems);
+                options.MaxCollectionItems,
+                scenario.Receiver);
             await process.StandardInput.WriteLineAsync(ObservationCodec.Serialize(request)).ConfigureAwait(false);
             await process.StandardInput.FlushAsync(CancellationToken.None).ConfigureAwait(false);
             process.StandardInput.Close();
