@@ -107,6 +107,30 @@ function Get-ArchivePayloadHash {
     }
 }
 
+function Get-ArchiveEntryText {
+    param(
+        [Parameter(Mandatory = $true)][string]$ArchivePath,
+        [Parameter(Mandatory = $true)][string]$EntryName
+    )
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($ArchivePath)
+    try {
+        $entry = $archive.GetEntry($EntryName)
+        Assert-True ($null -ne $entry) "The installed package is missing '$EntryName'."
+        $reader = [IO.StreamReader]::new($entry.Open())
+        try {
+            return $reader.ReadToEnd().TrimStart([char]0xFEFF)
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 function Get-DirectoryPayloadHash {
     param([Parameter(Mandatory = $true)][string]$PayloadRoot)
 
@@ -178,7 +202,15 @@ try {
     [Environment]::SetEnvironmentVariable('DOTNET_NOLOGO', '1', 'Process')
     [Environment]::SetEnvironmentVariable('KEELMATRIX_NO_TELEMETRY', '1', 'Process')
 
-    Invoke-Checked 'dotnet' @('restore', $solution, '--configfile', (Join-Path $repo 'NuGet.config'), '-p:NuGetAudit=false')
+    Invoke-Checked 'dotnet' @(
+        'restore',
+        $solution,
+        '--configfile',
+        (Join-Path $repo 'NuGet.config'),
+        '-p:NuGetAudit=false',
+        "-p:NuGetScratch=$scratch",
+        "-p:RestorePackagesPath=$nugetPackages"
+    )
     Invoke-Checked 'dotnet' @('build', $baselineProject, '-c', 'Release', '--no-restore')
     Invoke-Checked 'dotnet' @('build', $candidateProject, '-c', 'Release', '--no-restore')
 
@@ -249,10 +281,15 @@ try {
     Assert-True ($null -ne $installedPackage) "The freshly installed tool store did not retain the candidate package: $installedPackageRoot"
     $installedPackageHash = (Get-FileHash -LiteralPath $installedPackage.FullName -Algorithm SHA256).Hash
     Assert-True ($installedPackageHash -ceq $candidateHash) "The installed package bytes did not match the freshly built package hash $candidateHash. Installed hash: $installedPackageHash"
+    $projectReadmePath = Join-Path $repo 'src/KeelMatrix.BehaviorOracle/README.md'
+    $expectedProjectReadme = (Get-Content -LiteralPath $projectReadmePath -Raw).TrimStart([char]0xFEFF)
+    $installedReadme = Get-ArchiveEntryText -ArchivePath $installedPackage.FullName -EntryName 'README.md'
+    Assert-True ($installedReadme -ceq $expectedProjectReadme) 'The installed package README did not match the project-local README content.'
     $archivePayloadHash = Get-ArchivePayloadHash -ArchivePath $nupkg
     $installedPayloadHash = Get-DirectoryPayloadHash -PayloadRoot $installedPayloadRoot
     Assert-True ($installedPayloadHash -ceq $archivePayloadHash) "The installed tool payload hash did not match the candidate archive payload. Archive: $archivePayloadHash; installed: $installedPayloadHash"
     Write-Output "Fresh package hash verified: $candidateHash ($($installedPackage.FullName))"
+    Write-Output 'Installed package README verified as the project-local README content.'
     Write-Output "Installed tool payload hash verified: $installedPayloadHash ($installedPayloadRoot)"
 
     @{

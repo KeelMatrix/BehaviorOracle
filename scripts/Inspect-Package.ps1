@@ -28,6 +28,15 @@ $dependencyVersion = '0.1.0'
 $targetFramework = 'net8.0'
 $packageNamespace = 'http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd'
 $copyright = 'KeelMatrix'
+$packageReadmeMarker = '<!-- KeelMatrix.BehaviorOracle package README: project-local source -->'
+$packageReadmeRequiredContent = @(
+    '# KeelMatrix.BehaviorOracle',
+    '## Install',
+    'dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0',
+    '## Quick start',
+    '## Important limitations',
+    'https://github.com/KeelMatrix/BehaviorOracle/blob/main/README.md'
+)
 
 function Assert-Contract {
     param(
@@ -215,6 +224,31 @@ function Assert-PackageReadmeLinks {
     }
 }
 
+function Assert-PackageReadmeContract {
+    param(
+        [Parameter(Mandatory = $true)][System.IO.Compression.ZipArchive]$Archive,
+        [Parameter(Mandatory = $true)][string]$ProjectReadmePath
+    )
+
+    Assert-Contract (Test-Path -LiteralPath $ProjectReadmePath -PathType Leaf) "Project-local package README was not found: $ProjectReadmePath"
+    $readme = Read-ZipEntryText -Archive $Archive -Name 'README.md'
+    Assert-Contract ($readme.Contains($packageReadmeMarker, [StringComparison]::Ordinal)) 'Packed README is missing the project-local package README marker.'
+    foreach ($requiredContent in $packageReadmeRequiredContent) {
+        Assert-Contract ($readme.Contains($requiredContent, [StringComparison]::Ordinal)) "Packed README is missing required content '$requiredContent'."
+    }
+}
+
+function Assert-PackageReadmeSource {
+    param(
+        [Parameter(Mandatory = $true)][System.IO.Compression.ZipArchive]$Archive,
+        [Parameter(Mandatory = $true)][string]$ProjectReadmePath
+    )
+
+    $readme = Read-ZipEntryText -Archive $Archive -Name 'README.md'
+    $expectedReadme = (Get-Content -LiteralPath $ProjectReadmePath -Raw).TrimStart([char]0xFEFF)
+    Assert-Contract ($readme -ceq $expectedReadme) 'Packed README does not exactly match the project-local README at src/KeelMatrix.BehaviorOracle/README.md.'
+}
+
 function Assert-CommonMetadata {
     param(
         [Parameter(Mandatory = $true)][Xml.XmlDocument]$Document,
@@ -336,7 +370,8 @@ function Inspect-Nupkg {
     param(
         [Parameter(Mandatory = $true)][string]$ArchivePath,
         [Parameter(Mandatory = $true)][string]$ExpectedCommit,
-        [Parameter(Mandatory = $true)][string]$IconPath
+        [Parameter(Mandatory = $true)][string]$IconPath,
+        [Parameter(Mandatory = $true)][string]$ProjectReadmePath
     )
 
     Assert-Contract ([IO.Path]::GetFileName($ArchivePath) -ceq "$packageId.$ExpectedVersion.nupkg") 'The tool package filename is incorrect.'
@@ -375,7 +410,9 @@ function Inspect-Nupkg {
 
         $metadataEntries = @($archive.Entries | Where-Object { $_.FullName -match '^package/services/metadata/core-properties/[0-9a-f]{32}\.psmdcp$' })
         Assert-Contract ($metadataEntries.Count -eq 1) 'The tool package must contain exactly one NuGet core-properties metadata entry.'
+        Assert-PackageReadmeContract -Archive $archive -ProjectReadmePath $ProjectReadmePath
         Assert-PackageReadmeLinks -Archive $archive
+        Assert-PackageReadmeSource -Archive $archive -ProjectReadmePath $ProjectReadmePath
 
         $nuspec = Read-XmlEntry -Archive $archive -Name "$packageId.nuspec"
         Assert-CommonMetadata -Document $nuspec -ToolPackage $true -ExpectedCommit $ExpectedCommit
@@ -439,7 +476,8 @@ try {
     Assert-Contract (Test-Path -LiteralPath $PackagePath -PathType Leaf) "Tool package was not found: $PackagePath"
     Assert-Contract (Test-Path -LiteralPath $SymbolsPath -PathType Leaf) "Symbol package was not found: $SymbolsPath"
 
-    $nupkgPdb = Inspect-Nupkg -ArchivePath $PackagePath -ExpectedCommit $expectedCommit -IconPath $ExpectedIconPath
+    $projectReadmePath = Join-Path $repo 'src/KeelMatrix.BehaviorOracle/README.md'
+    $nupkgPdb = Inspect-Nupkg -ArchivePath $PackagePath -ExpectedCommit $expectedCommit -IconPath $ExpectedIconPath -ProjectReadmePath $projectReadmePath
     $snupkgPdb = Inspect-Snupkg -ArchivePath $SymbolsPath -ExpectedCommit $expectedCommit
     $nupkgPdbHash = ([Security.Cryptography.SHA256]::Create().ComputeHash($nupkgPdb) | ForEach-Object ToString x2) -join ''
     $snupkgPdbHash = ([Security.Cryptography.SHA256]::Create().ComputeHash($snupkgPdb) | ForEach-Object ToString x2) -join ''

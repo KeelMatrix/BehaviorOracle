@@ -37,6 +37,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="README.md" Pack="true" PackagePath="README.md" Visible="false" />
     <PackageReference Include="KeelMatrix.Telemetry" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
   </ItemGroup>
