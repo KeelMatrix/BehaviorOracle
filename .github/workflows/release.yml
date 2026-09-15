@@ -170,6 +170,8 @@ jobs:
             throw "Unexpected synthetic benchmark metrics: $($metrics | ConvertTo-Json -Compress)."
           }
 
+          exit 0
+
       - name: Audit vulnerable dependencies (required, fail closed)
         shell: pwsh
         run: pwsh -NoProfile -File scripts/Invoke-DependencyAudit.ps1 -Mode Required -Solution KeelMatrix.BehaviorOracle.sln
