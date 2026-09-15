@@ -233,6 +233,7 @@ jobs:
           -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.${{ needs.resolve-version.outputs.version }}.snupkg
           -ExpectedVersion $env:RELEASE_VERSION
           -ExpectedRepositoryCommit $env:GITHUB_SHA
+          -VerifyReleaseReference
 
       - name: Validate isolated package consumer
         shell: pwsh

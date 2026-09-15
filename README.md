@@ -169,14 +169,35 @@ The shared telemetry package also honors `DOTNET_CLI_TELEMETRY_OPTOUT`, `DO_NOT_
 The repository includes a composite Action under `action/`. After the tool package is available from the configured package source, it builds the selected baseline and candidate Git revisions and invokes the same tool:
 
 ```yaml
-- name: Compare library behavior
-  uses: KeelMatrix/BehaviorOracle/action@main
-  with:
-    baseline-ref: v1.2.0
-    candidate-ref: ${{ github.sha }}
-    project: src/Example/Example.csproj
-    config: .github/behavior-oracle.json
+name: BehaviorOracle comparison
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository history and tags
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compare library behavior
+        uses: KeelMatrix/BehaviorOracle/action@v0.1.0
+        with:
+          baseline-ref: v1.2.0
+          candidate-ref: ${{ github.sha }}
+          project: src/Example/Example.csproj
+          config: .github/behavior-oracle.json
 ```
+
+The checkout step is part of the Action contract: use `actions/checkout` with `fetch-depth: 0` before invoking BehaviorOracle so the requested baseline history and tags are available in `GITHUB_WORKSPACE`. The Action does not fetch revisions itself. If a required revision is unavailable, it fails closed with an actionable checkout/ref diagnostic.
 
 The wrapper requires the tool version to be available from the configured package source. It does not replace ordinary build or API-compatibility checks.
 

@@ -8,7 +8,9 @@ param(
 
     [string]$ExpectedRepositoryCommit,
 
-    [string]$ExpectedVersion = '0.1.0'
+    [string]$ExpectedVersion = '0.1.0',
+
+    [switch]$VerifyReleaseReference
 )
 
 $ErrorActionPreference = 'Stop'
@@ -95,6 +97,14 @@ $inspector = Join-Path $PSScriptRoot 'Inspect-Package.ps1'
 $negativeTest = Join-Path $PSScriptRoot 'Test-PackageInspection.ps1'
 
 try {
+    if ($VerifyReleaseReference) {
+        Assert-Contract (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) 'Release-reference verification requires ExpectedRepositoryCommit.'
+        $releaseTag = "v$ExpectedVersion"
+        $tagCommit = (& git -C $repo rev-parse --verify "$releaseTag^{commit}" 2>&1 | Out-String).Trim()
+        Assert-Contract ($LASTEXITCODE -eq 0 -and $tagCommit -match '^[0-9a-fA-F]{40}$') "Release tag '$releaseTag' is not available in the checked-out repository."
+        Assert-Contract ($tagCommit.ToLowerInvariant() -ceq $ExpectedRepositoryCommit.Trim().ToLowerInvariant()) "Release tag '$releaseTag' does not resolve to the expected repository commit '$ExpectedRepositoryCommit'."
+    }
+
     Assert-Contract (Test-Path -LiteralPath $PackagePath -PathType Leaf) "Tool package was not found: $PackagePath"
     Assert-Contract (Test-Path -LiteralPath $SymbolsPath -PathType Leaf) "Symbol package was not found: $SymbolsPath"
     New-Item -ItemType Directory -Path $firstPack, $secondPack -Force | Out-Null
@@ -157,7 +167,8 @@ try {
         '-NoProfile',
         '-File', $negativeTest,
         '-PackagePath', $PackagePath,
-        '-SymbolsPath', $SymbolsPath
+        '-SymbolsPath', $SymbolsPath,
+        '-ExpectedVersion', $ExpectedVersion
     )
     if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
         $negativeArguments += @('-ExpectedRepositoryCommit', $ExpectedRepositoryCommit)

@@ -29,13 +29,14 @@ $targetFramework = 'net8.0'
 $packageNamespace = 'http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd'
 $copyright = 'KeelMatrix'
 $packageReadmeMarker = '<!-- KeelMatrix.BehaviorOracle package README: project-local source -->'
+$releaseReference = "v$ExpectedVersion"
 $packageReadmeRequiredContent = @(
     '# KeelMatrix.BehaviorOracle',
     '## Install',
-    'dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0',
+    "dotnet tool install --global KeelMatrix.BehaviorOracle --version $ExpectedVersion",
     '## Quick start',
     '## Important limitations',
-    'https://github.com/KeelMatrix/BehaviorOracle/blob/main/README.md'
+    "https://github.com/KeelMatrix/BehaviorOracle/blob/$releaseReference/README.md"
 )
 
 function Assert-Contract {
@@ -179,6 +180,14 @@ function Assert-PackageReadmeLinks {
     )
 
     $readme = Read-ZipEntryText -Archive $Archive -Name 'README.md'
+    $repositoryLinkPattern = [regex]::Escape("$ExpectedRepositoryUrl/blob/") + '(?<reference>[^/\s)#>]+)/'
+    $repositoryLinks = [Text.RegularExpressions.Regex]::Matches($readme, $repositoryLinkPattern)
+    Assert-Contract ($repositoryLinks.Count -gt 0) "Packed README must contain at least one release-facing link under '$ExpectedRepositoryUrl/blob/'."
+    foreach ($repositoryLink in $repositoryLinks) {
+        $actualReference = $repositoryLink.Groups['reference'].Value
+        Assert-Contract ($actualReference -ceq $releaseReference) "Packed README repository link '$($repositoryLink.Value)' must use release-stable reference '$releaseReference', not '$actualReference'."
+    }
+
     $packedEntries = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach ($entry in $Archive.Entries) {
         [void]$packedEntries.Add($entry.FullName.Replace('\', '/'))

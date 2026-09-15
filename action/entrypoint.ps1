@@ -19,10 +19,15 @@ function Export-Revision {
         [Parameter(Mandatory = $true)][string]$Destination
     )
 
-    Invoke-Checked 'git' @('-C', $Workspace, 'rev-parse', '--verify', "$Revision^{commit}") | Out-Null
+    $resolvedCommit = (& git -C $Workspace rev-parse --verify "$Revision^{commit}" 2>&1 | Out-String).Trim()
+    $resolveExitCode = $LASTEXITCODE
+    if ($resolveExitCode -ne 0 -or $resolvedCommit -notmatch '^[0-9a-fA-F]{40}$') {
+        throw "Required Git revision '$Revision' is unavailable in GITHUB_WORKSPACE. The BehaviorOracle Action requires a preceding actions/checkout step with fetch-depth: 0 so the requested commit history and tags are available. Verify the checkout configuration and baseline-ref/candidate-ref values."
+    }
+
     $archive = Join-Path (Split-Path -Parent $Destination) ("$([IO.Path]::GetFileName($Destination)).tar")
     try {
-        Invoke-Checked 'git' @('-C', $Workspace, 'archive', '--format=tar', "--output=$archive", '--worktree-attributes', $Revision)
+        Invoke-Checked 'git' @('-C', $Workspace, 'archive', '--format=tar', "--output=$archive", '--worktree-attributes', $resolvedCommit)
         Invoke-Checked 'tar' @('-xf', $archive, '-C', $Destination)
     }
     finally {

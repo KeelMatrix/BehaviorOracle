@@ -55,6 +55,8 @@ pwsh -NoProfile -File .\scripts\Test-ReleasePublicationContractContract.ps1
 
 A planned changelog entry is expected to fail the release dry-run gate until release preparation is complete. The dry run never publishes the package.
 
+Package inspection requires documentation links shipped in the package to use the release tag form `blob/v<package-version>/...`. Pre-release local inspection validates that stable reference form without requiring the future tag to exist, so `Invoke-ReleaseDryRun.ps1` remains usable before tagging. The tag-triggered release workflow passes `-VerifyReleaseReference` to `Verify-PackageContract.ps1`; that gate requires the checked-out `v<package-version>` tag to resolve to the exact release commit.
+
 ## Validate the Action wrapper
 
 On Windows, run:

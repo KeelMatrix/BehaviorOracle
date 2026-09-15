@@ -49,9 +49,9 @@ Use `--format json` for a bounded, deterministic report. A result of `EQUIVALENT
 
 ## Deeper documentation
 
-- [Full product documentation and troubleshooting](https://github.com/KeelMatrix/BehaviorOracle/blob/main/README.md)
-- [Configuration and report schema change checklist](https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/SCHEMA_CHANGE_CHECKLIST.md)
-- [Synthetic benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/benchmark-report.md)
-- [Real-library feasibility evidence](https://github.com/KeelMatrix/BehaviorOracle/blob/main/bench/real-targets.md)
-- [Security policy](https://github.com/KeelMatrix/BehaviorOracle/blob/main/SECURITY.md)
-- [Privacy](https://github.com/KeelMatrix/BehaviorOracle/blob/main/PRIVACY.md)
+- [Full product documentation and troubleshooting](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/README.md)
+- [Configuration and report schema change checklist](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/docs/SCHEMA_CHANGE_CHECKLIST.md)
+- [Synthetic benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/docs/benchmark-report.md)
+- [Real-library feasibility evidence](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/bench/real-targets.md)
+- [Security policy](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/SECURITY.md)
+- [Privacy](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/PRIVACY.md)

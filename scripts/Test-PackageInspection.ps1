@@ -8,7 +8,9 @@ param(
 
     [string]$ExpectedRepositoryCommit,
 
-    [string]$InspectorPath
+    [string]$InspectorPath,
+
+    [string]$ExpectedVersion = '0.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -241,11 +243,12 @@ function Invoke-ReadmeLinkNegativeInspection {
         [Parameter(Mandatory = $true)][string]$PackagePath,
         [Parameter(Mandatory = $true)][string]$SymbolsPath,
         [Parameter(Mandatory = $true)][string]$InspectorPath,
-        [Parameter(Mandatory = $true)][string]$ExpectedRepositoryCommit
+        [Parameter(Mandatory = $true)][string]$ExpectedRepositoryCommit,
+        [Parameter(Mandatory = $true)][string]$ExpectedVersion
     )
 
     Set-PackageReadmeLink -PackagePath $PackagePath `
-        -CurrentLink 'https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/SCHEMA_CHANGE_CHECKLIST.md' `
+        -CurrentLink "https://github.com/KeelMatrix/BehaviorOracle/blob/v$ExpectedVersion/docs/SCHEMA_CHANGE_CHECKLIST.md" `
         -ReplacementLink 'docs/SCHEMA_CHANGE_CHECKLIST.md'
     $arguments = @(
         '-NoProfile',
@@ -261,6 +264,35 @@ function Invoke-ReadmeLinkNegativeInspection {
     $exitCode = $LASTEXITCODE
     Assert-Test ($exitCode -ne 0) 'The package inspector accepted a relative README link to an unpacked path.'
     Assert-Test ($output.Contains("relative link to an unpacked path 'docs/SCHEMA_CHANGE_CHECKLIST.md'.", [StringComparison]::Ordinal)) "The unpacked relative README link was rejected without the expected diagnostic. Output: $output"
+}
+
+function Invoke-ReadmeReleaseReferenceNegativeInspection {
+    param(
+        [Parameter(Mandatory = $true)][string]$PackagePath,
+        [Parameter(Mandatory = $true)][string]$SymbolsPath,
+        [Parameter(Mandatory = $true)][string]$InspectorPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedRepositoryCommit,
+        [Parameter(Mandatory = $true)][string]$ExpectedVersion
+    )
+
+    Set-PackageReadmeLink -PackagePath $PackagePath `
+        -CurrentLink "https://github.com/KeelMatrix/BehaviorOracle/blob/v$ExpectedVersion/docs/SCHEMA_CHANGE_CHECKLIST.md" `
+        -ReplacementLink 'https://github.com/KeelMatrix/BehaviorOracle/blob/main/docs/SCHEMA_CHANGE_CHECKLIST.md'
+    $arguments = @(
+        '-NoProfile',
+        '-File', $InspectorPath,
+        '-PackagePath', $PackagePath,
+        '-SymbolsPath', $SymbolsPath,
+        '-ExpectedVersion', $ExpectedVersion
+    )
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
+        $arguments += @('-ExpectedRepositoryCommit', $ExpectedRepositoryCommit)
+    }
+
+    $output = (& pwsh @arguments 2>&1 | Out-String).TrimEnd()
+    $exitCode = $LASTEXITCODE
+    Assert-Test ($exitCode -ne 0) 'The package inspector accepted a packed README link using the main branch reference.'
+    Assert-Test ($output.Contains("must use release-stable reference 'v$ExpectedVersion'", [StringComparison]::Ordinal)) "The main-branch README link was rejected without the expected release-reference diagnostic. Output: $output"
 }
 
 function Invoke-ReadmeSourceNegativeInspection {
@@ -336,13 +368,15 @@ if ([string]::IsNullOrWhiteSpace($InspectorPath)) {
 }
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) "behaviororacle-package-inspection-$([Guid]::NewGuid().ToString('N'))"
-$mutatedPackage = Join-Path $testRoot 'KeelMatrix.BehaviorOracle.0.1.0.nupkg'
-$wrongCopyrightPackage = Join-Path $testRoot 'wrong-copyright\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
-$missingCopyrightPackage = Join-Path $testRoot 'missing-copyright\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
-$wrongDescriptionPackage = Join-Path $testRoot 'wrong-description\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
-$relativeReadmePackage = Join-Path $testRoot 'relative-readme\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
-$wrongReadmeSourcePackage = Join-Path $testRoot 'wrong-readme-source\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
-$missingReadmeContentPackage = Join-Path $testRoot 'missing-readme-content\KeelMatrix.BehaviorOracle.0.1.0.nupkg'
+$packageName = "KeelMatrix.BehaviorOracle.$ExpectedVersion.nupkg"
+$mutatedPackage = Join-Path $testRoot $packageName
+$wrongCopyrightPackage = Join-Path $testRoot "wrong-copyright\$packageName"
+$missingCopyrightPackage = Join-Path $testRoot "missing-copyright\$packageName"
+$wrongDescriptionPackage = Join-Path $testRoot "wrong-description\$packageName"
+$relativeReadmePackage = Join-Path $testRoot "relative-readme\$packageName"
+$mainReadmeReferencePackage = Join-Path $testRoot "main-readme-reference\$packageName"
+$wrongReadmeSourcePackage = Join-Path $testRoot "wrong-readme-source\$packageName"
+$missingReadmeContentPackage = Join-Path $testRoot "missing-readme-content\$packageName"
 $output = $null
 $exitCode = $null
 
@@ -385,7 +419,7 @@ try {
     $exitCode = $LASTEXITCODE
     Assert-Test ($exitCode -ne 0) 'The package inspector accepted an unexpected benign-looking archive entry.'
     Assert-Test ($output.Contains("unexpected archive entry 'tools/net8.0/any/diagnostics.txt'", [StringComparison]::Ordinal)) "The negative package inspection did not report the unexpected entry. Output: $output"
-    New-Item -ItemType Directory -Path (Split-Path -Parent $wrongCopyrightPackage), (Split-Path -Parent $missingCopyrightPackage), (Split-Path -Parent $wrongDescriptionPackage), (Split-Path -Parent $relativeReadmePackage), (Split-Path -Parent $wrongReadmeSourcePackage), (Split-Path -Parent $missingReadmeContentPackage) -Force | Out-Null
+    New-Item -ItemType Directory -Path (Split-Path -Parent $wrongCopyrightPackage), (Split-Path -Parent $missingCopyrightPackage), (Split-Path -Parent $wrongDescriptionPackage), (Split-Path -Parent $relativeReadmePackage), (Split-Path -Parent $mainReadmeReferencePackage), (Split-Path -Parent $wrongReadmeSourcePackage), (Split-Path -Parent $missingReadmeContentPackage) -Force | Out-Null
     Copy-Item -LiteralPath $PackagePath -Destination $wrongCopyrightPackage
     Invoke-NegativeInspection -Mutation Wrong -PackagePath $wrongCopyrightPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $missingCopyrightPackage
@@ -393,12 +427,14 @@ try {
     Copy-Item -LiteralPath $PackagePath -Destination $wrongDescriptionPackage
     Invoke-DescriptionNegativeInspection -PackagePath $wrongDescriptionPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $relativeReadmePackage
-    Invoke-ReadmeLinkNegativeInspection -PackagePath $relativeReadmePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
+    Invoke-ReadmeLinkNegativeInspection -PackagePath $relativeReadmePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit -ExpectedVersion $ExpectedVersion
+    Copy-Item -LiteralPath $PackagePath -Destination $mainReadmeReferencePackage
+    Invoke-ReadmeReleaseReferenceNegativeInspection -PackagePath $mainReadmeReferencePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit -ExpectedVersion $ExpectedVersion
     Copy-Item -LiteralPath $PackagePath -Destination $wrongReadmeSourcePackage
     Invoke-ReadmeSourceNegativeInspection -PackagePath $wrongReadmeSourcePackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
     Copy-Item -LiteralPath $PackagePath -Destination $missingReadmeContentPackage
     Invoke-MissingReadmeContentNegativeInspection -PackagePath $missingReadmeContentPackage -SymbolsPath $SymbolsPath -InspectorPath $InspectorPath -ExpectedRepositoryCommit $ExpectedRepositoryCommit
-    Write-Output 'Negative package inspection passed: unexpected entry, wrong/missing copyright metadata, mismatched description metadata, relative unpacked README links, wrong README source, and missing README content were rejected.'
+    Write-Output 'Negative package inspection passed: unexpected entry, wrong/missing copyright metadata, mismatched description metadata, relative unpacked README links, main-branch README references, wrong README source, and missing README content were rejected.'
     exit 0
 }
 catch {

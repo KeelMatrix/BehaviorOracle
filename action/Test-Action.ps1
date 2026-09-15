@@ -10,6 +10,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $entrypoint = Join-Path $PSScriptRoot 'entrypoint.ps1'
 $validationRoot = Join-Path ([IO.Path]::GetTempPath()) "behavior oracle action validation $PID"
 $fixtureRoot = Join-Path $validationRoot 'fixture repository'
+$consumerRoot = Join-Path $validationRoot 'consumer checkout'
 $packageFeed = Join-Path $validationRoot 'local package feed'
 $packageProject = Join-Path $repo 'src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj'
 $solution = Join-Path $repo 'KeelMatrix.BehaviorOracle.sln'
@@ -52,8 +53,13 @@ function Invoke-ActionCase {
         [Parameter(Mandatory = $true)][string]$CandidateRef,
         [Parameter(Mandatory = $true)][string]$Project,
         [Parameter(Mandatory = $true)][string]$Config,
+        [Parameter(Mandatory = $false)][string]$Workspace,
         [Parameter(Mandatory = $false)][string]$ToolVersion = '0.1.0'
     )
+
+    if ([string]::IsNullOrWhiteSpace($Workspace)) {
+        $Workspace = $fixtureRoot
+    }
 
     $names = @(
         'GITHUB_WORKSPACE',
@@ -70,7 +76,7 @@ function Invoke-ActionCase {
     }
 
     try {
-        Set-EnvironmentValue 'GITHUB_WORKSPACE' $fixtureRoot
+        Set-EnvironmentValue 'GITHUB_WORKSPACE' $Workspace
         Set-EnvironmentValue 'BEHAVIOR_ORACLE_BASELINE_REF' $BaselineRef
         Set-EnvironmentValue 'BEHAVIOR_ORACLE_CANDIDATE_REF' $CandidateRef
         Set-EnvironmentValue 'BEHAVIOR_ORACLE_PROJECT' $Project
@@ -154,6 +160,7 @@ public static class Calculator
     Invoke-Checked 'git' @('-C', $fixtureRoot, 'add', '.')
     Invoke-Checked 'git' @('-C', $fixtureRoot, 'commit', '-m', 'baseline fixture')
     $baselineRef = (& git -C $fixtureRoot rev-parse HEAD).Trim()
+    Invoke-Checked 'git' @('-C', $fixtureRoot, 'tag', 'v1.2.0')
 
     @'
 namespace ActionValidation;
@@ -166,6 +173,7 @@ public static class Calculator
     Invoke-Checked 'git' @('-C', $fixtureRoot, 'add', '.')
     Invoke-Checked 'git' @('-C', $fixtureRoot, 'commit', '-m', 'candidate fixture')
     $candidateRef = (& git -C $fixtureRoot rev-parse HEAD).Trim()
+    Invoke-Checked 'git' @('-C', $fixtureRoot, 'branch', 'candidate')
 
     @'
 namespace ActionValidation;
@@ -193,8 +201,34 @@ public static class Calculator
     $buildFailure = Invoke-ActionCase $baselineRef $brokenRef $pathWithSpaces $relativeConfig
     Assert-ActionResult 'candidate build failure' $buildFailure 2 'failed with exit code'
 
-    $toolInstallFailure = Invoke-ActionCase $baselineRef $candidateRef $pathWithSpaces $relativeConfig '99.99.99'
+    $toolInstallFailure = Invoke-ActionCase $baselineRef $candidateRef $pathWithSpaces $relativeConfig -ToolVersion '99.99.99'
     Assert-ActionResult 'tool-install failure' $toolInstallFailure 2
+
+    $fixtureUrl = [Uri]::new($fixtureRoot).AbsoluteUri
+    Invoke-Checked 'git' @('clone', '--depth', '1', '--no-tags', '--branch', 'candidate', $fixtureUrl, $consumerRoot)
+    $isShallow = (& git -C $consumerRoot rev-parse --is-shallow-repository).Trim()
+    if ($isShallow -ne 'true') {
+        throw "The consumer checkout regression setup is not shallow: '$isShallow'."
+    }
+    $shallowTag = @(& git -C $consumerRoot tag --list 'v1.2.0')
+    if ($shallowTag.Count -ne 0) {
+        throw 'The consumer checkout regression setup unexpectedly contains the baseline tag before the full-history checkout.'
+    }
+
+    $missingRevision = Invoke-ActionCase 'v1.2.0' 'HEAD' $pathWithSpaces $relativeConfig -Workspace $consumerRoot
+    Assert-ActionResult 'missing revision fails closed from a shallow checkout' $missingRevision 2 'Required Git revision'
+    if (-not $missingRevision.Output.Contains('fetch-depth: 0', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "The missing revision diagnostic did not explain the documented full-history checkout contract. Output: $($missingRevision.Output)"
+    }
+
+    Invoke-Checked 'git' @('-C', $consumerRoot, 'fetch', '--unshallow', '--tags', 'origin')
+    $fetchedBaseline = (& git -C $consumerRoot rev-parse --verify 'v1.2.0^{commit}').Trim()
+    if ($fetchedBaseline -ne $baselineRef) {
+        throw "The full-history consumer checkout resolved v1.2.0 to '$fetchedBaseline' instead of '$baselineRef'."
+    }
+
+    $documentedWorkflow = Invoke-ActionCase 'v1.2.0' 'HEAD' $pathWithSpaces $relativeConfig -Workspace $consumerRoot
+    Assert-ActionResult 'documented full-history checkout workflow' $documentedWorkflow 1 'BEHAVIORAL DIVERGENCE'
 
     Write-Output 'Action validation passed on Windows with PowerShell and .NET 8.'
 }
