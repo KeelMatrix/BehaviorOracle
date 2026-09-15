@@ -1,15 +1,100 @@
-bin/
-obj/
+# ------------------------------------------------------------------------------
+# Build artifacts
+# ------------------------------------------------------------------------------
 artifacts/
-.vs/
-TestResults/
-*.user
-*.suo
-*.nupkg
-*.snupkg
-*.log
+**/bin/
+**/obj/
+
+# BehaviorOracle benchmark build/output directories
 bench/corpus/**/bin/
 bench/corpus/**/obj/
 bench/corpus/_baseline/
 bench/corpus/_candidate/
 bench/corpus/**/bench/
+
+# ------------------------------------------------------------------------------
+# NuGet outputs and local feeds
+# ------------------------------------------------------------------------------
+*.nupkg
+*.snupkg
+*.nuspec
+packages/
+local-feed/
+.local-feed/
+nuget-local/
+
+# ------------------------------------------------------------------------------
+# Test and coverage outputs
+# ------------------------------------------------------------------------------
+TestResults/
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.cov
+coverage*.xml
+coverage*.json
+lcov*.info
+
+# ------------------------------------------------------------------------------
+# IDE / editor state and caches
+# ------------------------------------------------------------------------------
+.vs/
+.vscode/
+.idea/
+.dotnet/
+_ReSharper*/
+*.suo
+*.user
+*.userosscache
+*.csproj.user
+*.userprefs
+*.DotSettings.user
+
+# Generated editorconfig from the SDK; keep the repository .editorconfig tracked.
+**/GeneratedMSBuildEditorConfig.editorconfig
+
+# ------------------------------------------------------------------------------
+# OS noise
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ------------------------------------------------------------------------------
+# Logs, caches, and temporary files
+# ------------------------------------------------------------------------------
+*.log
+*.cache
+.cache/
+**/.cache/
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# ------------------------------------------------------------------------------
+# Local telemetry and machine-specific configuration
+# ------------------------------------------------------------------------------
+keelmatrix.telemetry.json
+
+# ------------------------------------------------------------------------------
+# Environment / secret-bearing local files
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Common local credential/key material. Public repository keys or certificates
+# must be explicitly force-added only when they are intentionally non-secret.
+*.pfx
+*.p12
+*.key
+
+# ------------------------------------------------------------------------------
+# Restore-generated legacy files
+# ------------------------------------------------------------------------------
+project.lock.json
