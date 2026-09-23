@@ -7,12 +7,12 @@
     "scenarioBudget": 32,
     "confirmationRuns": 3
   },
-  "engineAssemblySha512": "8611C9B7CD090153E386D4120A4FFB1E9D593A0807F7D628F3A2C24951D75F902312180AF87E68B8A402BA7C04712C06C74C94FA1E2E7E35ACB8A2574B50AABD",
+  "engineAssemblySha512": "E82DAE518CE5036D158FB018D2DFE7B9D0A5D8565BAD570015BC3D89B5C3E676338DCA11005C38112F5063CFE4343A6C6E91DDD2C2AE36EB147B508F7AD0DE7B",
   "engineBuildContract": {
     "configuration": "Release",
     "targetFramework": "net8.0",
-    "version": "0.1.0",
-    "packageVersion": "0.1.0",
+    "version": "0.1.1",
+    "packageVersion": "0.1.1",
     "deterministic": true,
     "continuousIntegrationBuild": true,
     "deterministicSourcePaths": true,
