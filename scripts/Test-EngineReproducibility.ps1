@@ -103,8 +103,8 @@ try {
         $project = Join-Path $clone 'src/KeelMatrix.BehaviorOracle/KeelMatrix.BehaviorOracle.csproj'
         $config = Join-Path $clone 'NuGet.config'
         $buildProperties = @(
-            '-p:Version=0.1.0',
-            '-p:PackageVersion=0.1.0',
+            '-p:Version=0.1.1',
+            '-p:PackageVersion=0.1.1',
             '-p:SourceRevisionId=',
             '-p:RepositoryCommit=',
             '-p:ContinuousIntegrationBuild=true',
@@ -113,8 +113,8 @@ try {
             '-p:IncludeSourceRevisionInInformationalVersion=false',
             '-p:DebugType=none',
             '-p:DebugSymbols=false',
-            '-p:AssemblyVersion=0.1.0.0',
-            '-p:FileVersion=0.1.0.0'
+            '-p:AssemblyVersion=0.1.1.0',
+            '-p:FileVersion=0.1.1.0'
         )
         $buildProperties += '-p:PathMap=$(MSBuildProjectDirectory)=/_/'
         if ($null -ne $build) {

@@ -9,7 +9,7 @@ BehaviorOracle is evidence gathering, not a proof of arbitrary semantic equivale
 Install the tool from NuGet.org with:
 
 ```powershell
-dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0
+dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.1
 ```
 
 For contribution and package validation paths, see the [contributor guide](https://github.com/KeelMatrix/BehaviorOracle/blob/main/CONTRIBUTING.md).
@@ -19,7 +19,7 @@ For contribution and package validation paths, see the [contributor guide](https
 Update an existing installation with:
 
 ```powershell
-dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.0
+dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.1
 ```
 
 ### Uninstall
@@ -189,7 +189,7 @@ jobs:
           fetch-depth: 0
 
       - name: Compare library behavior
-        uses: KeelMatrix/BehaviorOracle/action@v0.1.0
+        uses: KeelMatrix/BehaviorOracle/action@v0.1.1
         with:
           baseline-ref: v1.2.0
           candidate-ref: ${{ github.sha }}

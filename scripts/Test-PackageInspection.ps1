@@ -10,7 +10,7 @@ param(
 
     [string]$InspectorPath,
 
-    [string]$ExpectedVersion = '0.1.0'
+    [string]$ExpectedVersion = '0.1.1'
 )
 
 $ErrorActionPreference = 'Stop'

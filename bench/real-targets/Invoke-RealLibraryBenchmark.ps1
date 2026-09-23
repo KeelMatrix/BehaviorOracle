@@ -471,8 +471,8 @@ try {
         engineBuildContract = [ordered]@{
             configuration = 'Release'
             targetFramework = 'net8.0'
-            version = '0.1.0'
-            packageVersion = '0.1.0'
+            version = '0.1.1'
+            packageVersion = '0.1.1'
             deterministic = $true
             continuousIntegrationBuild = $true
             deterministicSourcePaths = $true

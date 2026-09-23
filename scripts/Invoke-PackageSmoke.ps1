@@ -146,13 +146,13 @@ function Get-DirectoryPayloadHash {
 }
 
 function Resolve-InstalledPayloadRoot {
-    $knownRoot = Join-Path $installRoot '.store\keelmatrix.behaviororacle\0.1.0\keelmatrix.behaviororacle\0.1.0\tools\net8.0\any'
+    $knownRoot = Join-Path $installRoot '.store\keelmatrix.behaviororacle\0.1.1\keelmatrix.behaviororacle\0.1.1\tools\net8.0\any'
     if (Test-Path -LiteralPath $knownRoot -PathType Container) {
         return $knownRoot
     }
 
     $roots = @(Get-ChildItem -LiteralPath $installRoot -Recurse -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -match '\.store[\\/]keelmatrix\.behaviororacle[\\/]0\.1\.0[\\/].*[\\/]tools[\\/]net8\.0[\\/]any$' })
+        Where-Object { $_.FullName -match '\.store[\\/]keelmatrix\.behaviororacle[\\/]0\.1\.1[\\/].*[\\/]tools[\\/]net8\.0[\\/]any$' })
     Assert-True ($roots.Count -eq 1) 'Unable to resolve the freshly installed tool payload directory.'
     return $roots[0].FullName
 }
@@ -179,7 +179,7 @@ $scratch = Join-Path $smokeRoot 'nuget-scratch'
 $pluginsCache = Join-Path $smokeRoot 'nuget-plugins-cache'
 $dotnetHome = Join-Path $smokeRoot 'dotnet-home'
 $toolPath = $null
-$version = '0.1.0'
+$version = '0.1.1'
 $nupkgName = "KeelMatrix.BehaviorOracle.$version.nupkg"
 $snupkgName = "KeelMatrix.BehaviorOracle.$version.snupkg"
 $oldTelemetryOptOut = [Environment]::GetEnvironmentVariable('KEELMATRIX_NO_TELEMETRY', 'Process')
@@ -216,7 +216,7 @@ try {
 
     if ([string]::IsNullOrWhiteSpace($PackagePath)) {
         Invoke-Checked 'dotnet' @('build', $project, '-c', 'Release', '--no-restore', "-p:SourceRevisionId=$expectedCommit", "-p:RepositoryCommit=$expectedCommit")
-        $packArguments = @('pack', $project, '-c', 'Release', '--no-build', '--no-restore', '--include-symbols', '-p:SymbolPackageFormat=snupkg', '-p:PackageVersion=0.1.0')
+        $packArguments = @('pack', $project, '-c', 'Release', '--no-build', '--no-restore', '--include-symbols', '-p:SymbolPackageFormat=snupkg', '-p:PackageVersion=0.1.1')
         if (-not [string]::IsNullOrWhiteSpace($ExpectedRepositoryCommit)) {
             $packArguments += @("-p:SourceRevisionId=$expectedCommit", "-p:RepositoryCommit=$expectedCommit")
         }

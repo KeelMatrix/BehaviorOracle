@@ -321,15 +321,15 @@ jobs:
         shell: pwsh
         run: >
           pwsh -NoProfile -File scripts/Verify-PackageContract.ps1
-          -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.nupkg
-          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.snupkg
+          -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.1.nupkg
+          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.1.snupkg
           -ExpectedRepositoryCommit $env:GITHUB_SHA
       - name: Install and smoke-test the packed tool
         shell: pwsh
         run: >
           pwsh -NoProfile -File scripts/Invoke-PackageSmoke.ps1
-          -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.nupkg
-          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.0.snupkg
+          -PackagePath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.1.nupkg
+          -SymbolsPath ./artifacts/packages/KeelMatrix.BehaviorOracle.0.1.1.snupkg
           -ExpectedRepositoryCommit $env:GITHUB_SHA
           -Seed 12345
           -ScenarioBudget 20

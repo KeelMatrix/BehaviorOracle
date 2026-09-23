@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Tag = 'v0.1.0',
+    [string]$Tag = 'v0.1.1',
     [string]$RepositoryPath = (Split-Path -Parent $PSScriptRoot),
     [string]$ScratchDirectory
 )
@@ -90,9 +90,6 @@ try {
     }
 
     $version = $match.Groups['version'].Value
-    if ($version -ne '0.1.0') {
-        throw "Unsupported first-release version '$version'; expected 0.1.0."
-    }
     $env:RELEASE_VERSION = $version
 
     $status = Invoke-Captured -File 'git' -Arguments @('-C', $repository, 'status', '--porcelain', '--untracked-files=no')

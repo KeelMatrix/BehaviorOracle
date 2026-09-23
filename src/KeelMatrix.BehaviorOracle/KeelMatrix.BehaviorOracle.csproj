@@ -4,8 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>KeelMatrix.BehaviorOracle</AssemblyName>
     <RootNamespace>KeelMatrix.BehaviorOracle</RootNamespace>
-    <Version>0.1.0</Version>
-    <PackageVersion>0.1.0</PackageVersion>
+    <Version>0.1.1</Version>
+    <PackageVersion>0.1.1</PackageVersion>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>behavior-oracle</ToolCommandName>
@@ -42,4 +42,3 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
   </ItemGroup>
 </Project>
-

@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$SymbolsPath,
 
-    [string]$ExpectedVersion = '0.1.0',
+    [string]$ExpectedVersion = '0.1.1',
 
     [string]$ExpectedRepositoryCommit,
 

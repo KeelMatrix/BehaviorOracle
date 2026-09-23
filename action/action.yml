@@ -16,7 +16,7 @@ inputs:
   tool-version:
     description: BehaviorOracle tool package version to install.
     required: false
-    default: 0.1.0
+    default: 0.1.1
   package-source:
     description: Optional package source used for the tool and its dependencies.
     required: false

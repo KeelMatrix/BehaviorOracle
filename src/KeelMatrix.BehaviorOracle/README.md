@@ -9,13 +9,13 @@ BehaviorOracle compares two .NET library builds with the same deterministic scen
 Install the .NET tool globally from NuGet.org:
 
 ```powershell
-dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.0
+dotnet tool install --global KeelMatrix.BehaviorOracle --version 0.1.1
 ```
 
 Update an existing installation with:
 
 ```powershell
-dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.0
+dotnet tool update --global KeelMatrix.BehaviorOracle --version 0.1.1
 ```
 
 ## Quick start
@@ -49,9 +49,9 @@ Use `--format json` for a bounded, deterministic report. A result of `EQUIVALENT
 
 ## Deeper documentation
 
-- [Full product documentation and troubleshooting](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/README.md)
-- [Configuration and report schema change checklist](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/docs/SCHEMA_CHANGE_CHECKLIST.md)
-- [Synthetic benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/docs/benchmark-report.md)
-- [Real-library feasibility evidence](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/bench/real-targets.md)
-- [Security policy](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/SECURITY.md)
-- [Privacy](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.0/PRIVACY.md)
+- [Full product documentation and troubleshooting](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.1/README.md)
+- [Configuration and report schema change checklist](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.1/docs/SCHEMA_CHANGE_CHECKLIST.md)
+- [Synthetic benchmark report](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.1/docs/benchmark-report.md)
+- [Real-library feasibility evidence](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.1/bench/real-targets.md)
+- [Security policy](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.1/SECURITY.md)
+- [Privacy](https://github.com/KeelMatrix/BehaviorOracle/blob/v0.1.1/PRIVACY.md)

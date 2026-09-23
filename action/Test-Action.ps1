@@ -54,7 +54,7 @@ function Invoke-ActionCase {
         [Parameter(Mandatory = $true)][string]$Project,
         [Parameter(Mandatory = $true)][string]$Config,
         [Parameter(Mandatory = $false)][string]$Workspace,
-        [Parameter(Mandatory = $false)][string]$ToolVersion = '0.1.0'
+        [Parameter(Mandatory = $false)][string]$ToolVersion = '0.1.1'
     )
 
     if ([string]::IsNullOrWhiteSpace($Workspace)) {
@@ -130,7 +130,7 @@ try {
 
     Invoke-Checked 'dotnet' @('restore', $packageProject, '--configfile', $nugetConfig, '-p:NuGetAudit=false')
     Invoke-Checked 'dotnet' @('build', $packageProject, '-c', 'Release', '--no-restore')
-    Invoke-Checked 'dotnet' @('pack', $packageProject, '-c', 'Release', '--no-build', '--no-restore', '-o', $packageFeed, '-p:PackageVersion=0.1.0')
+    Invoke-Checked 'dotnet' @('pack', $packageProject, '-c', 'Release', '--no-build', '--no-restore', '-o', $packageFeed, '-p:PackageVersion=0.1.1')
 
     $fixtureProject = Join-Path $fixtureRoot 'src\Example Library\Example Library.csproj'
     $fixtureConfig = Join-Path $fixtureRoot '.github\Oracle Config.json'

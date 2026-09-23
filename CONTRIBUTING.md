@@ -42,14 +42,14 @@ To validate the packed tool, pack it and run the isolated package contract and c
 dotnet build .\KeelMatrix.BehaviorOracle.sln --configuration Release --no-restore --warnaserror
 dotnet pack .\src\KeelMatrix.BehaviorOracle\KeelMatrix.BehaviorOracle.csproj --configuration Release --no-build --no-restore --include-symbols -p:SymbolPackageFormat=snupkg --output .\artifacts\packages
 $commit = (git rev-parse HEAD).Trim()
-pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit $commit
-pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.0.snupkg -ExpectedRepositoryCommit $commit -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
+pwsh -NoProfile -File .\scripts\Verify-PackageContract.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.1.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.1.snupkg -ExpectedRepositoryCommit $commit
+pwsh -NoProfile -File .\scripts\Invoke-PackageSmoke.ps1 -PackagePath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.1.nupkg -SymbolsPath .\artifacts\packages\KeelMatrix.BehaviorOracle.0.1.1.snupkg -ExpectedRepositoryCommit $commit -Seed 12345 -ScenarioBudget 20 -ConfirmationRuns 2
 ```
 
 The smoke test uses an isolated local feed and cache directories; it does not change a global tool installation. The release dry run is expected to pass only after the target changelog entry is finalized. It can be run earlier to exercise the gate, but the changelog contract is expected to fail until release preparation is complete:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.0
+pwsh -NoProfile -File .\scripts\Invoke-ReleaseDryRun.ps1 -Tag v0.1.1
 pwsh -NoProfile -File .\scripts\Test-ReleasePublicationContractContract.ps1
 ```
 

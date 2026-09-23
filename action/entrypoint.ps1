@@ -78,7 +78,7 @@ $baselineRef = $env:BEHAVIOR_ORACLE_BASELINE_REF
 $candidateRef = $env:BEHAVIOR_ORACLE_CANDIDATE_REF
 $project = $env:BEHAVIOR_ORACLE_PROJECT
 $config = $env:BEHAVIOR_ORACLE_CONFIG
-$toolVersion = if ($env:BEHAVIOR_ORACLE_TOOL_VERSION) { $env:BEHAVIOR_ORACLE_TOOL_VERSION } else { '0.1.0' }
+$toolVersion = if ($env:BEHAVIOR_ORACLE_TOOL_VERSION) { $env:BEHAVIOR_ORACLE_TOOL_VERSION } else { '0.1.1' }
 $packageSource = $env:BEHAVIOR_ORACLE_PACKAGE_SOURCE
 
 if ([string]::IsNullOrWhiteSpace($baselineRef) -or
